@@ -136,6 +136,7 @@ impl<'a> Lexer<'a> {
 
     fn lex_rparen(&mut self) {
         self.tokens.push(Token::rparen(Loc(self.pos, self.pos + 1)));
+        self.pos += 1;
     }
 
     fn lex_number(&mut self) {
@@ -152,7 +153,7 @@ impl<'a> Lexer<'a> {
     /// Read a code while `f` returns `true` and return position of the end of fragment; each character in the fragment satisfies `f`.
     fn recognize_multiple_char(&mut self, mut f: impl FnMut(u8) -> bool) -> usize {
         let mut pos = self.pos;
-        while self.pos < self.input.len() && f(self.input[self.pos]) {
+        while pos < self.input.len() && f(self.input[pos]) {
             pos += 1;
         }
         pos
@@ -160,7 +161,7 @@ impl<'a> Lexer<'a> {
 
     fn skip_spaces(&mut self) {
         let pos = self.recognize_multiple_char(|b| b" \n\t".contains(&b));
-        self.pos += pos;
+        self.pos = pos;
     }
 }
 
