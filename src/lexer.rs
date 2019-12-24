@@ -88,7 +88,7 @@ impl<'a> Lexer<'a> {
     pub fn lex(&mut self) -> Result<&Vec<Token>, LexError> {
         while self.pos < self.input.len() {
             match self.input[self.pos] {
-                b'0'...b'9' => self.lex_number(),
+                b'0'..=b'9' => self.lex_number(),
                 b'+' => self.lex_plus(),
                 b'-' => self.lex_minus(),
                 b'*' => self.lex_asterisk(),
@@ -202,8 +202,5 @@ fn test_lexer() {
 fn test_lexer_error() {
     let mut lexer = Lexer::new("1 $ 2 * 3 - -10");
     let tokens = lexer.lex();
-    assert_eq!(
-        tokens,
-        Err(LexError::invalid_char('$', Loc(2, 3))),
-    );
+    assert_eq!(tokens, Err(LexError::invalid_char('$', Loc(2, 3))), );
 }
