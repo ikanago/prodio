@@ -9,7 +9,7 @@ pub enum AstKind {
     Num(u64),
     UniOp {
         op: UniOp,
-        e: Box<Ast>,
+        node: Box<Ast>,
     },
     BinOp {
         op: BinOp,
@@ -26,7 +26,13 @@ impl Ast {
     }
 
     pub fn uniop(op: UniOp, e: Ast, loc: Loc) -> Self {
-        Self::new(AstKind::UniOp { op, e: Box::new(e) }, loc)
+        Self::new(
+            AstKind::UniOp {
+                op,
+                node: Box::new(e),
+            },
+            loc,
+        )
     }
 
     pub fn binop(op: BinOp, lhs: Ast, rhs: Ast, loc: Loc) -> Self {
