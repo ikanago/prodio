@@ -111,7 +111,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<Ast, ParseError> {
     }
 }
 
-///
+/// Abstract function for binary operator.
 fn parse_left_binop<Tokens>(
     tokens: &mut Peekable<Tokens>,
     sub_expr_parser: fn(&mut Peekable<Tokens>) -> Result<Ast, ParseError>,
@@ -246,38 +246,40 @@ fn parse_term<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
 
 #[test]
 fn test_parser() {
-    // 5 + 2 * 31 - -10
+    // (5 + 2) * 31 - -10
     let ast = parse(vec![
-        Token::number(5, Loc(0, 1)),
-        Token::plus(Loc(2, 3)),
-        Token::number(2, Loc(4, 5)),
-        Token::asterisk(Loc(6, 7)),
-        Token::number(31, Loc(8, 9)),
-        Token::minus(Loc(10, 11)),
-        Token::minus(Loc(12, 13)),
-        Token::number(10, Loc(13, 15)),
+        Token::lparen(Loc(0, 1)),
+        Token::number(5, Loc(1, 2)),
+        Token::plus(Loc(3, 4)),
+        Token::number(2, Loc(5, 6)),
+        Token::rparen(Loc(6, 7)),
+        Token::asterisk(Loc(8, 9)),
+        Token::number(31, Loc(10, 12)),
+        Token::minus(Loc(13, 14)),
+        Token::minus(Loc(15, 16)),
+        Token::number(10, Loc(16, 18)),
     ]);
     assert_eq!(
         ast,
         Ok(Ast::binop(
-            BinOp::sub(Loc(10, 11)),
+            BinOp::sub(Loc(13, 14)),
             Ast::binop(
-                BinOp::add(Loc(2, 3)),
-                Ast::num(5, Loc(0, 1)),
+                BinOp::mul(Loc(8, 9)),
                 Ast::binop(
-                    BinOp::new(BinOpKind::Mul, Loc(6, 7)),
-                    Ast::num(2, Loc(4, 5)),
-                    Ast::num(31, Loc(8, 9)),
-                    Loc(4, 9),
+                    BinOp::add(Loc(3, 4)),
+                    Ast::num(5, Loc(1, 2)),
+                    Ast::num(2, Loc(5, 6)),
+                    Loc(1, 6),
                 ),
-                Loc(0, 9),
+                Ast::num(31, Loc(10, 12)),
+                Loc(1, 12),
             ),
             Ast::uniop(
-                UniOp::minus(Loc(12, 13)),
-                Ast::num(10, Loc(13, 15)),
-                Loc(12, 15),
+                UniOp::minus(Loc(15, 16)),
+                Ast::num(10, Loc(16, 18)),
+                Loc(15, 18),
             ),
-            Loc(0, 15),
+            Loc(1, 18),
         ))
     )
 }

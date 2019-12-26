@@ -181,19 +181,21 @@ fn test_lexer() {
         ]),
     );
 
-    let mut lexer = Lexer::new("1 + 2 * 3 - -10");
+    let mut lexer = Lexer::new("(5 + 2) * 31 - -10");
     let tokens = lexer.lex();
     assert_eq!(
         tokens,
         Ok(&vec![
-            Token::number(1, Loc(0, 1)),
-            Token::plus(Loc(2, 3)),
-            Token::number(2, Loc(4, 5)),
-            Token::asterisk(Loc(6, 7)),
-            Token::number(3, Loc(8, 9)),
-            Token::minus(Loc(10, 11)),
-            Token::minus(Loc(12, 13)),
-            Token::number(10, Loc(13, 15)),
+            Token::lparen(Loc(0, 1)),
+            Token::number(5, Loc(1, 2)),
+            Token::plus(Loc(3, 4)),
+            Token::number(2, Loc(5, 6)),
+            Token::rparen(Loc(6, 7)),
+            Token::asterisk(Loc(8, 9)),
+            Token::number(31, Loc(10, 12)),
+            Token::minus(Loc(13, 14)),
+            Token::minus(Loc(15, 16)),
+            Token::number(10, Loc(16, 18)),
         ]),
     );
 }
