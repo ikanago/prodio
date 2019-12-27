@@ -1,4 +1,4 @@
-use prodio::code_gen::code_gen;
+use prodio::code_gen::Generator;
 use prodio::lexer::Lexer;
 use prodio::parser::parse;
 
@@ -7,5 +7,9 @@ fn main() {
     let mut lexer = Lexer::new(code);
     let tokens = lexer.lex().unwrap();
     let ast = parse(tokens.to_vec()).unwrap();
-    code_gen(&ast);
+    let mut generator = Generator::new();
+    generator.code_gen(&ast);
+    for code in generator.code {
+        println!("{}", code);
+    }
 }
