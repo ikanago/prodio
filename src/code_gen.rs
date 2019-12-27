@@ -20,13 +20,14 @@ impl Generator {
             ".global main\n",
             "main:\n",
             "  push rbp\n",
-            "  mov rbp, rsp",
+            "  mov rbp, rsp\n",
             )
                 .to_string(),
         );
         self.gen(ast);
-        self.code
-            .push(concat!("  pop rax\n", "  mov rsp, rbp\n", "  pop rbp\n", "  ret", ).to_string());
+        self.code.push(
+            concat!("  pop rax\n", "  mov rsp, rbp\n", "  pop rbp\n", "  ret\n", ).to_string(),
+        );
     }
 
     /// Generate assembly code for an AST.
@@ -40,27 +41,27 @@ impl Generator {
 
     /// Generate code for positive number.
     fn gen_num(&mut self, n: &u64) {
-        self.code.push(format!("  push {}", n));
+        self.code.push(format!("  push {}\n", n));
     }
 
     /// Generate code for binary operator.
     fn gen_binary_operator(&mut self, op: BinOpKind, lhs: &Ast, rhs: &Ast) {
         self.gen(lhs);
         self.gen(rhs);
-        self.code.push("  pop rdi".to_string());
-        self.code.push("  pop rax".to_string());
+        self.code.push("  pop rdi\n".to_string());
+        self.code.push("  pop rax\n".to_string());
 
         match op {
-            BinOpKind::Add => self.code.push("  add rax, rdi".to_string()),
-            BinOpKind::Sub => self.code.push("  sub rax, rdi".to_string()),
-            BinOpKind::Mul => self.code.push("  imul rax, rdi".to_string()),
+            BinOpKind::Add => self.code.push("  add rax, rdi\n".to_string()),
+            BinOpKind::Sub => self.code.push("  sub rax, rdi\n".to_string()),
+            BinOpKind::Mul => self.code.push("  imul rax, rdi\n".to_string()),
             BinOpKind::Div => {
-                self.code.push("  cqo".to_string());
-                self.code.push("  idiv rdi".to_string());
+                self.code.push("  cqo\n".to_string());
+                self.code.push("  idiv rdi\n".to_string());
             }
         }
 
-        self.code.push("  push rax".to_string());
+        self.code.push("  push rax\n".to_string());
     }
 
     /// Generate code for unary operator.
@@ -68,15 +69,15 @@ impl Generator {
         match op {
             UniOpKind::Plus => {
                 self.gen(node);
-                self.code.push("  pop rax".to_string());
+                self.code.push("  pop rax\n".to_string());
             }
             UniOpKind::Minus => {
-                self.code.push("  mov rax 0".to_string());
+                self.code.push("  mov rax 0\n".to_string());
                 self.gen(node);
-                self.code.push("  pop rdi".to_string());
-                self.code.push("  sub rax, rdi".to_string());
+                self.code.push("  pop rdi\n".to_string());
+                self.code.push("  sub rax\n, rdi".to_string());
             }
         }
-        self.code.push("  push rax".to_string());
+        self.code.push("  push rax\n".to_string());
     }
 }
