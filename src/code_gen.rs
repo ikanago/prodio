@@ -1,5 +1,5 @@
 use crate::parser::{Ast, BinOpKind, UniOpKind};
-use crate::parser::AstKind::{BinOp, Num, UniOp};
+use crate::parser::AstKind::*;
 
 /// Struct for retain generated code.
 #[derive(Debug, Clone)]
@@ -13,7 +13,7 @@ impl Generator {
     }
 
     /// Entry point of code generation.
-    pub fn code_gen(&mut self, ast: &Ast) {
+    pub fn code_gen(&mut self, asts: &Vec<Ast>) {
         self.code.push(
             concat!(
             ".intel_syntax noprefix\n",
@@ -24,7 +24,9 @@ impl Generator {
             )
                 .to_string(),
         );
-        self.gen(ast);
+        for ast in asts {
+            self.gen(ast);
+        }
         self.code.push(
             concat!("  pop rax\n", "  mov rsp, rbp\n", "  pop rbp\n", "  ret\n", ).to_string(),
         );
@@ -34,8 +36,10 @@ impl Generator {
     fn gen(&mut self, ast: &Ast) {
         match &ast.value {
             Num(n) => self.gen_num(n),
-            BinOp { op, lhs, rhs } => self.gen_binary_operator(op.clone().value, lhs, rhs),
-            UniOp { op, node } => self.gen_unary_operator(op.clone().value, node),
+            BinOp { op, lhs, rhs } => self.gen_binary_operator(op.clone(), lhs, rhs),
+            UniOp { op, node } => self.gen_unary_operator(op.clone(), node),
+            Assignment { lhs, rhs } => unimplemented!(),
+            Variable(var) => unimplemented!(),
         }
     }
 

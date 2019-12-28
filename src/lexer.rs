@@ -12,6 +12,8 @@ pub enum TokenKind {
     LParen,
     RParen,
     Identifier(String),
+    Semicolon,
+    Assignment,
     Number(u64),
 }
 
@@ -113,6 +115,8 @@ impl<'a> Lexer<'a> {
                 b')' => self.lex_rparen(),
                 b'0'..=b'9' => self.lex_number(),
                 b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(),
+                b';' => self.lex_semicolon(),
+                b'=' => self.lex_assignment(),
                 b' ' | b'\n' | b'\t' => self.skip_spaces(),
                 b => {
                     return Err(LexError::invalid_char(
@@ -127,33 +131,32 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_plus(&mut self) {
-        self.tokens.push(Token::plus(Loc(self.pos, self.pos + 1)));
+        self.tokens.push(token!(Plus, self.pos, self.pos + 1));
         self.pos += 1;
     }
 
     fn lex_minus(&mut self) {
-        self.tokens.push(Token::minus(Loc(self.pos, self.pos + 1)));
+        self.tokens.push(token!(Minus, self.pos, self.pos + 1));
         self.pos += 1;
     }
 
     fn lex_asterisk(&mut self) {
-        self.tokens
-            .push(Token::asterisk(Loc(self.pos, self.pos + 1)));
+        self.tokens.push(token!(Asterisk, self.pos, self.pos + 1));
         self.pos += 1;
     }
 
     fn lex_slash(&mut self) {
-        self.tokens.push(Token::slash(Loc(self.pos, self.pos + 1)));
+        self.tokens.push(token!(Slash, self.pos, self.pos + 1));
         self.pos += 1;
     }
 
     fn lex_lparen(&mut self) {
-        self.tokens.push(Token::lparen(Loc(self.pos, self.pos + 1)));
+        self.tokens.push(token!(LParen, self.pos, self.pos + 1));
         self.pos += 1;
     }
 
     fn lex_rparen(&mut self) {
-        self.tokens.push(Token::rparen(Loc(self.pos, self.pos + 1)));
+        self.tokens.push(token!(RParen, self.pos, self.pos + 1));
         self.pos += 1;
     }
 
@@ -162,7 +165,7 @@ impl<'a> Lexer<'a> {
         let end = self.recognize_multiple_char(|b| b"0123456789".contains(&b));
         let num = from_utf8(&self.input[start..end]).unwrap().parse().unwrap();
 
-        self.tokens.push(Token::number(num, Loc(start, end)));
+        self.tokens.push(token!(Number(num), start, end));
         self.pos = end;
     }
 
@@ -171,7 +174,7 @@ impl<'a> Lexer<'a> {
         let end = self.recognize_multiple_char(|b| b.is_ascii_alphanumeric() || b == b'_');
         let ident = from_utf8(&self.input[start..end]).unwrap();
         self.tokens
-            .push(Token::identifier(ident.to_string(), Loc(start, end)));
+            .push(token!(Identifier(ident.to_string()), start, end));
         self.pos = end;
     }
 
@@ -182,6 +185,16 @@ impl<'a> Lexer<'a> {
             pos += 1;
         }
         pos
+    }
+
+    fn lex_semicolon(&mut self) {
+        self.tokens.push(token!(Semicolon, self.pos, self.pos + 1));
+        self.pos += 1;
+    }
+
+    fn lex_assignment(&mut self) {
+        self.tokens.push(token!(Assignment, self.pos, self.pos + 1));
+        self.pos += 1;
     }
 
     fn skip_spaces(&mut self) {
@@ -230,16 +243,23 @@ mod tests {
             ]),
         );
 
-        let mut lexer = Lexer::new("abc + 9 * def");
+        let mut lexer = Lexer::new("abc = 3; def = 5; abc + def;");
         let tokens = lexer.lex();
         assert_eq!(
             tokens,
             Ok(&vec![
                 token!(Identifier("abc".to_string()), 0, 3),
-                token!(Plus, 4, 5),
-                token!(Number(9), 6, 7),
-                token!(Asterisk, 8, 9),
-                token!(Identifier("def".to_string()), 10, 13),
+                token!(Assignment, 4, 5),
+                token!(Number(3), 6, 7),
+                token!(Semicolon, 7, 8),
+                token!(Identifier("def".to_string()), 9, 12),
+                token!(Assignment, 13, 14),
+                token!(Number(5), 15, 16),
+                token!(Semicolon, 16, 17),
+                token!(Identifier("abc".to_string()), 18, 21),
+                token!(Plus, 22, 23),
+                token!(Identifier("def".to_string()), 24, 27),
+                token!(Semicolon, 27, 28),
             ]),
         );
     }
