@@ -1,10 +1,8 @@
 extern crate prodio;
 
-use std::fs::File;
-use std::io::{self, Write};
-use std::process::{Command, Stdio};
-
-use prodio::compile;
+//use std::fs::File;
+//use std::io::{self, Write};
+//use std::process::{Command, Stdio};
 
 // Unable to execute binary built from assembly.
 /*

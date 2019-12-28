@@ -1,24 +1,33 @@
+use std::str::from_utf8;
+
 use crate::util::{Annotation, Loc};
 
 /// Data type that represents Token.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenKind {
-    Number(u64),
     Plus,
     Minus,
     Asterisk,
     Slash,
     LParen,
     RParen,
+    Identifier(String),
+    Number(u64),
 }
 
 pub type Token = Annotation<TokenKind>;
 
-impl Token {
-    pub fn number(n: u64, loc: Loc) -> Self {
-        Self::new(TokenKind::Number(n), loc)
-    }
+#[macro_export]
+macro_rules! token {
+    ($token_kind: ident, $start: expr, $end: expr) => {
+        Token::new(TokenKind::$token_kind, Loc($start, $end))
+    };
+    ($token_kind: ident ($var: expr), $start: expr, $end: expr) => {
+        Token::new(TokenKind::$token_kind($var), Loc($start, $end))
+    };
+}
 
+impl Token {
     pub fn plus(loc: Loc) -> Self {
         Self::new(TokenKind::Plus, loc)
     }
@@ -41,6 +50,14 @@ impl Token {
 
     pub fn rparen(loc: Loc) -> Self {
         Self::new(TokenKind::RParen, loc)
+    }
+
+    pub fn identifier(ident: String, loc: Loc) -> Self {
+        Self::new(TokenKind::Identifier(ident), loc)
+    }
+
+    pub fn number(n: u64, loc: Loc) -> Self {
+        Self::new(TokenKind::Number(n), loc)
     }
 }
 
@@ -88,13 +105,14 @@ impl<'a> Lexer<'a> {
     pub fn lex(&mut self) -> Result<&Vec<Token>, LexError> {
         while self.pos < self.input.len() {
             match self.input[self.pos] {
-                b'0'..=b'9' => self.lex_number(),
                 b'+' => self.lex_plus(),
                 b'-' => self.lex_minus(),
                 b'*' => self.lex_asterisk(),
                 b'/' => self.lex_slash(),
                 b'(' => self.lex_lparen(),
                 b')' => self.lex_rparen(),
+                b'0'..=b'9' => self.lex_number(),
+                b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(),
                 b' ' | b'\n' | b'\t' => self.skip_spaces(),
                 b => {
                     return Err(LexError::invalid_char(
@@ -140,13 +158,20 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_number(&mut self) {
-        use std::str::from_utf8;
-
         let start = self.pos;
         let end = self.recognize_multiple_char(|b| b"0123456789".contains(&b));
         let num = from_utf8(&self.input[start..end]).unwrap().parse().unwrap();
 
         self.tokens.push(Token::number(num, Loc(start, end)));
+        self.pos = end;
+    }
+
+    fn lex_identifier(&mut self) {
+        let start = self.pos;
+        let end = self.recognize_multiple_char(|b| b.is_ascii_alphanumeric() || b == b'_');
+        let ident = from_utf8(&self.input[start..end]).unwrap();
+        self.tokens
+            .push(Token::identifier(ident.to_string(), Loc(start, end)));
         self.pos = end;
     }
 
@@ -165,44 +190,65 @@ impl<'a> Lexer<'a> {
     }
 }
 
-#[test]
-fn test_lexer() {
-    let mut lexer = Lexer::new("+/*(-)");
-    let tokens = lexer.lex();
-    assert_eq!(
-        tokens,
-        Ok(&vec![
-            Token::plus(Loc(0, 1)),
-            Token::slash(Loc(1, 2)),
-            Token::asterisk(Loc(2, 3)),
-            Token::lparen(Loc(3, 4)),
-            Token::minus(Loc(4, 5)),
-            Token::rparen(Loc(5, 6)),
-        ]),
-    );
+#[macro_use]
+#[cfg(test)]
+mod tests {
+    use crate::lexer::{Lexer, Token, TokenKind};
+    use crate::util::Loc;
 
-    let mut lexer = Lexer::new("(5 + 2) * 31 - -10");
-    let tokens = lexer.lex();
-    assert_eq!(
-        tokens,
-        Ok(&vec![
-            Token::lparen(Loc(0, 1)),
-            Token::number(5, Loc(1, 2)),
-            Token::plus(Loc(3, 4)),
-            Token::number(2, Loc(5, 6)),
-            Token::rparen(Loc(6, 7)),
-            Token::asterisk(Loc(8, 9)),
-            Token::number(31, Loc(10, 12)),
-            Token::minus(Loc(13, 14)),
-            Token::minus(Loc(15, 16)),
-            Token::number(10, Loc(16, 18)),
-        ]),
-    );
-}
+    #[test]
+    fn test_lexer() {
+        let mut lexer = Lexer::new("+/*(-)");
+        let tokens = lexer.lex();
+        assert_eq!(
+            tokens,
+            Ok(&vec![
+                token!(Plus, 0, 1),
+                token!(Slash, 1, 2),
+                token!(Asterisk, 2, 3),
+                token!(LParen, 3, 4),
+                token!(Minus, 4, 5),
+                token!(RParen, 5, 6),
+            ]),
+        );
 
-#[test]
-fn test_lexer_error() {
-    let mut lexer = Lexer::new("1 $ 2 * 3 - -10");
-    let tokens = lexer.lex();
-    assert_eq!(tokens, Err(LexError::invalid_char('$', Loc(2, 3))), );
+        let mut lexer = Lexer::new("(5 + 2) * 31 - -10");
+        let tokens = lexer.lex();
+        assert_eq!(
+            tokens,
+            Ok(&vec![
+                token!(LParen, 0, 1),
+                token!(Number(5), 1, 2),
+                token!(Plus, 3, 4),
+                token!(Number(2), 5, 6),
+                token!(RParen, 6, 7),
+                token!(Asterisk, 8, 9),
+                token!(Number(31), 10, 12),
+                token!(Minus, 13, 14),
+                token!(Minus, 15, 16),
+                token!(Number(10), 16, 18),
+            ]),
+        );
+
+        let mut lexer = Lexer::new("abc + 9 * def");
+        let tokens = lexer.lex();
+        assert_eq!(
+            tokens,
+            Ok(&vec![
+                token!(Identifier("abc".to_string()), 0, 3),
+                token!(Plus, 4, 5),
+                token!(Number(9), 6, 7),
+                token!(Asterisk, 8, 9),
+                token!(Identifier("def".to_string()), 10, 13),
+            ]),
+        );
+    }
+
+    #[test]
+    fn test_lexer_error() {
+        use crate::lexer::LexError;
+        let mut lexer = Lexer::new("1 $ 2 * 3 - -10");
+        let tokens = lexer.lex();
+        assert_eq!(tokens, Err(LexError::invalid_char('$', Loc(2, 3))), );
+    }
 }

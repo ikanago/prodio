@@ -202,7 +202,7 @@ fn parse_unary<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item=Token>,
 {
-    match tokens.peek().map(|token| token.value) {
+    match tokens.peek().map(|token| &token.value) {
         Some(TokenKind::Plus) | Some(TokenKind::Minus) => {
             let op = match tokens.next() {
                 Some(Token {
