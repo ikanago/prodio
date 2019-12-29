@@ -1,18 +1,8 @@
 use std::collections::HashMap;
 use std::iter::Peekable;
 
-use crate::lexer::{Lexer, Token, TokenKind};
+use crate::lexer::{Token, TokenKind};
 use crate::util::{Annotation, Loc};
-
-#[macro_export]
-macro_rules! tokens {
-    ($token_kind: ident, $start: expr, $end: expr) => {
-        Token::new(TokenKind::$token_kind, Loc($start, $end))
-    };
-    ($token_kind: ident ($var: expr), $start: expr, $end: expr) => {
-        Token::new(TokenKind::$token_kind($var), Loc($start, $end))
-    };
-}
 
 /// Data type of AST node.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -84,18 +74,6 @@ pub enum UniOpKind {
     Minus,
 }
 
-//pub type UniOp = Annotation<UniOpKind>;
-/*
-impl UniOp {
-    fn plus(loc: Loc) -> Self {
-        Self::new(UniOpKind::Plus, loc)
-    }
-
-    fn minus(loc: Loc) -> Self {
-        Self::new(UniOpKind::Minus, loc)
-    }
-}*/
-
 /// Data type of binary operator.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BinOpKind {
@@ -104,26 +82,6 @@ pub enum BinOpKind {
     Mul,
     Div,
 }
-
-//pub type BinOp = Annotation<BinOpKind>;
-/*
-impl BinOpKind {
-    fn add(loc: Loc) -> Self {
-        Self::new(BinOpKind::Add, loc)
-    }
-
-    fn sub(loc: Loc) -> Self {
-        Self::new(BinOpKind::Sub, loc)
-    }
-
-    fn mul(loc: Loc) -> Self {
-        Self::new(BinOpKind::Mul, loc)
-    }
-
-    fn div(loc: Loc) -> Self {
-        Self::new(BinOpKind::Div, loc)
-    }
-}*/
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParseError {
@@ -161,7 +119,7 @@ impl Parser {
             Parser::expect_semicolon(&tokens.next().unwrap())?;
             asts.push(ast);
             match tokens.peek() {
-                Some(token) => continue,
+                Some(_) => continue,
                 None => break,
             }
         }
@@ -221,6 +179,7 @@ impl Parser {
 
     /// BNF:
     ///     MUL ::= UNARY ("*" UNARY | "/"UNARY)*
+    ///
     fn parse_mul<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item = Token>,
@@ -255,11 +214,11 @@ impl Parser {
                 let op = match tokens.next() {
                     Some(Token {
                         value: TokenKind::Plus,
-                        loc,
+                        loc: _loc,
                     }) => UniOpKind::Plus,
                     Some(Token {
                         value: TokenKind::Minus,
-                        loc,
+                        loc: _loc,
                     }) => UniOpKind::Minus,
                     _ => unreachable!(),
                 };
@@ -310,7 +269,6 @@ impl Parser {
     }
 }
 
-//#[macro_use]
 #[cfg(test)]
 mod tests {
     use crate::lexer::{Lexer, Token, TokenKind};
@@ -318,23 +276,22 @@ mod tests {
     use crate::parser::Parser;
     use crate::util::Loc;
 
-    #[macro_use]
     #[test]
     fn test_calculate() {
         // (5 + 2) * 31 - -10;
         let mut parser = Parser::new();
         let ast = parser.parse(vec![
-            tokens!(LParen, 0, 1),
-            tokens!(Number(5), 1, 2),
-            tokens!(Plus, 3, 4),
-            tokens!(Number(2), 5, 6),
-            tokens!(RParen, 6, 7),
-            tokens!(Asterisk, 8, 9),
-            tokens!(Number(31), 10, 12),
-            tokens!(Minus, 13, 14),
-            tokens!(Minus, 15, 16),
-            tokens!(Number(10), 16, 18),
-            tokens!(Semicolon, 18, 19),
+            token!(LParen, 0, 1),
+            token!(Number(5), 1, 2),
+            token!(Plus, 3, 4),
+            token!(Number(2), 5, 6),
+            token!(RParen, 6, 7),
+            token!(Asterisk, 8, 9),
+            token!(Number(31), 10, 12),
+            token!(Minus, 13, 14),
+            token!(Minus, 15, 16),
+            token!(Number(10), 16, 18),
+            token!(Semicolon, 18, 19),
         ]);
         assert_eq!(
             ast,
@@ -362,18 +319,18 @@ mod tests {
         // abc = 3; def = 5; abc + def;
         let mut parser = Parser::new();
         let ast = parser.parse(vec![
-            tokens!(Identifier("abc".to_string()), 0, 3),
-            tokens!(Assignment, 4, 5),
-            tokens!(Number(3), 6, 7),
-            tokens!(Semicolon, 7, 8),
-            tokens!(Identifier("def".to_string()), 9, 12),
-            tokens!(Assignment, 13, 14),
-            tokens!(Number(5), 15, 16),
-            tokens!(Semicolon, 16, 17),
-            tokens!(Identifier("abc".to_string()), 18, 21),
-            tokens!(Plus, 22, 23),
-            tokens!(Identifier("def".to_string()), 24, 27),
-            tokens!(Semicolon, 27, 28),
+            token!(Identifier("abc".to_string()), 0, 3),
+            token!(Assignment, 4, 5),
+            token!(Number(3), 6, 7),
+            token!(Semicolon, 7, 8),
+            token!(Identifier("def".to_string()), 9, 12),
+            token!(Assignment, 13, 14),
+            token!(Number(5), 15, 16),
+            token!(Semicolon, 16, 17),
+            token!(Identifier("abc".to_string()), 18, 21),
+            token!(Plus, 22, 23),
+            token!(Identifier("def".to_string()), 24, 27),
+            token!(Semicolon, 27, 28),
         ]);
         eprintln!("{:#?}", ast);
         assert_eq!(

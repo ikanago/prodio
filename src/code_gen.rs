@@ -1,6 +1,3 @@
-use std::convert::identity;
-
-use crate::lexer::TokenKind;
 use crate::parser::{Ast, BinOpKind, Parser, UniOpKind};
 use crate::parser::AstKind::*;
 
@@ -101,21 +98,29 @@ impl Generator {
         self.code.push("  push rax".to_string());
     }
 
+    /// Generate code for assignment into variable.
     fn gen_assignment(&mut self, lhs: &Ast, rhs: &Ast) {
         let val_name = ident_val!(&lhs.value);
         self.gen_lval(&val_name);
         self.gen(rhs);
-        self.code
-            .push(concat!("  pop rdi\n", "  pop rax").to_string());
-        self.code.push("  mov [rax], rdi".to_string());
+        self.gen_store_value();
     }
 
+    /// Generate code of loading variable address.
     fn gen_lval(&mut self, val: &String) {
         let offset = self.parser.env.get(val).unwrap();
         self.code.push(format!("  lea rax, [rbp-{}]", offset));
         self.code.push("  push rax".to_string());
     }
 
+    /// Generate code for storing value into variable.
+    fn gen_store_value(&mut self) {
+        self.code
+            .push(concat!("  pop rdi\n", "  pop rax").to_string());
+        self.code.push("  mov [rax], rdi".to_string());
+    }
+
+    /// Generate code of variable.
     fn gen_variable(&mut self, val: &String) {
         self.gen_lval(val);
         self.code.push("  pop rax".to_string());
