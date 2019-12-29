@@ -3,12 +3,12 @@ use prodio::lexer::Lexer;
 use prodio::parser::Parser;
 
 fn main() {
-    let code = "(1 + 5 * 4) / 3";
+    let code = "abc = 3; def = 5; abc + def;";
     let mut lexer = Lexer::new(code);
     let tokens = lexer.lex().unwrap();
-    let parser = Parser::new();
+    let mut parser = Parser::new();
     let ast = parser.parse(tokens.to_vec()).unwrap();
-    let mut generator = Generator::new();
+    let mut generator = Generator::new(parser);
     generator.code_gen(&ast);
     for code in generator.code {
         println!("{}", code);

@@ -136,21 +136,24 @@ pub enum ParseError {
     Eof,
 }
 
+#[derive(Debug, Clone)]
 pub struct Parser {
     pub env: HashMap<String, u64>,
+    pub offset: u64,
 }
 
 impl Parser {
     pub fn new() -> Self {
         Parser {
             env: HashMap::new(),
+            offset: 0,
         }
     }
 
     /// Parse tokens and build AST.
     /// BNF:
     ///     EXPR ::= ADD
-    pub fn parse(&self, tokens: Vec<Token>) -> Result<Vec<Ast>, ParseError> {
+    pub fn parse(&mut self, tokens: Vec<Token>) -> Result<Vec<Ast>, ParseError> {
         let mut tokens = tokens.into_iter().peekable();
         let mut asts = Vec::new();
         loop {
@@ -167,7 +170,7 @@ impl Parser {
 
     /// BNF:
     ///     ASSIGN ::= ADD ("=" ASSIGN)?
-    fn parse_assign<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    fn parse_assign<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item = Token>,
     {
@@ -193,7 +196,7 @@ impl Parser {
 
     /// BNF:
     ///     ADD ::= MUL ("+" MUL | "-" MUL)*
-    fn parse_add<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    fn parse_add<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item = Token>,
     {
@@ -218,7 +221,7 @@ impl Parser {
 
     /// BNF:
     ///     MUL ::= UNARY ("*" UNARY | "/"UNARY)*
-    fn parse_mul<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    fn parse_mul<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item = Token>,
     {
@@ -243,7 +246,7 @@ impl Parser {
 
     /// BNF:
     ///     UNARY ::= NUMBER | "(" ADD ")"
-    fn parse_unary<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    fn parse_unary<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item = Token>,
     {
@@ -272,7 +275,7 @@ impl Parser {
     /// BNF:
     ///     NUMBER ::= DIGIT* | VARIABLE
     ///     DIGIT  ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
-    fn parse_term<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    fn parse_term<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item = Token>,
     {
@@ -281,7 +284,16 @@ impl Parser {
             .ok_or(ParseError::Eof)
             .and_then(|token| match token.value {
                 TokenKind::Number(n) => Ok(Ast::new(AstKind::Num(n), token.loc)),
-                TokenKind::Identifier(var) => Ok(Ast::new(AstKind::Variable(var), token.loc)),
+                TokenKind::Identifier(var) => {
+                    match self.env.get(var.as_str()) {
+                        Some(_) => (),
+                        None => {
+                            self.offset += 8;
+                            self.env.insert(var.clone(), self.offset);
+                        }
+                    }
+                    Ok(Ast::new(AstKind::Variable(var), token.loc))
+                }
                 TokenKind::LParen => {
                     let node = self.parse_add(tokens)?;
                     match tokens.next() {
@@ -310,7 +322,7 @@ mod tests {
     #[test]
     fn test_calculate() {
         // (5 + 2) * 31 - -10;
-        let parser = Parser::new();
+        let mut parser = Parser::new();
         let ast = parser.parse(vec![
             tokens!(LParen, 0, 1),
             tokens!(Number(5), 1, 2),
@@ -347,7 +359,8 @@ mod tests {
 
     #[test]
     fn test_assignment() {
-        let parser = Parser::new();
+        // abc = 3; def = 5; abc + def;
+        let mut parser = Parser::new();
         let ast = parser.parse(vec![
             tokens!(Identifier("abc".to_string()), 0, 3),
             tokens!(Assignment, 4, 5),
