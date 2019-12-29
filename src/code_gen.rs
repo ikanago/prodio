@@ -16,19 +16,19 @@ impl Generator {
     pub fn code_gen(&mut self, asts: &Vec<Ast>) {
         self.code.push(
             concat!(
-            ".intel_syntax noprefix\n",
-            ".global main\n",
-            "main:\n",
-            "  push rbp\n",
-            "  mov rbp, rsp\n",
+                ".intel_syntax noprefix\n",
+                ".global main\n",
+                "main:\n",
+                "  push rbp\n",
+                "  mov rbp, rsp\n",
             )
-                .to_string(),
+            .to_string(),
         );
         for ast in asts {
             self.gen(ast);
         }
         self.code.push(
-            concat!("  pop rax\n", "  mov rsp, rbp\n", "  pop rbp\n", "  ret\n", ).to_string(),
+            concat!("  pop rax\n", "  mov rsp, rbp\n", "  pop rbp\n", "  ret\n",).to_string(),
         );
     }
 

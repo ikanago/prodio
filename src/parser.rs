@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use std::iter::Peekable;
 
-use crate::lexer::{Token, TokenKind};
+use crate::lexer::{Lexer, Token, TokenKind};
 use crate::util::{Annotation, Loc};
 
 #[macro_export]
@@ -135,197 +136,182 @@ pub enum ParseError {
     Eof,
 }
 
-/// Parse tokens and build AST.
-/// BNF:
-///     EXPR ::= ADD
-pub fn parse(tokens: Vec<Token>) -> Result<Vec<Ast>, ParseError> {
-    let mut tokens = tokens.into_iter().peekable();
-    let mut asts = Vec::new();
-    loop {
-        let ast = parse_assign(&mut tokens)?;
-        expect_semicolon(&tokens.next().unwrap())?;
-        asts.push(ast);
-        match tokens.peek() {
-            Some(token) => continue,
-            None => break,
+pub struct Parser {
+    pub env: HashMap<String, u64>,
+}
+
+impl Parser {
+    pub fn new() -> Self {
+        Parser {
+            env: HashMap::new(),
         }
     }
-    Ok(asts)
-}
 
-/// BNF:
-///     ASSIGN ::= ADD ("=" ASSIGN)?
-fn parse_assign<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
-    where
-        Tokens: Iterator<Item=Token>,
-{
-    let lhs = parse_add(tokens)?;
-    match tokens.peek().map(|token| &token.value) {
-        Some(TokenKind::Assignment) => {
-            tokens.next();
-            let rhs = parse_assign(tokens)?;
-            let loc = lhs.loc.merge(&rhs.loc);
-
-            Ok(Ast::assignment(lhs, rhs, loc))
+    /// Parse tokens and build AST.
+    /// BNF:
+    ///     EXPR ::= ADD
+    pub fn parse(&self, tokens: Vec<Token>) -> Result<Vec<Ast>, ParseError> {
+        let mut tokens = tokens.into_iter().peekable();
+        let mut asts = Vec::new();
+        loop {
+            let ast = self.parse_assign(&mut tokens)?;
+            Parser::expect_semicolon(&tokens.next().unwrap())?;
+            asts.push(ast);
+            match tokens.peek() {
+                Some(token) => continue,
+                None => break,
+            }
         }
-        _ => Ok(lhs),
+        Ok(asts)
     }
-}
 
-fn expect_semicolon(token: &Token) -> Result<(), ParseError> {
-    match &token.value {
-        TokenKind::Semicolon => Ok(()),
-        _ => Err(ParseError::NoSemicolon),
-    }
-}
-
-/// Abstract function for binary operator.
-fn parse_left_binop<Tokens>(
-    tokens: &mut Peekable<Tokens>,
-    sub_expr_parser: fn(&mut Peekable<Tokens>) -> Result<Ast, ParseError>,
-    op_parser: fn(&mut Peekable<Tokens>) -> Result<BinOpKind, ParseError>,
-) -> Result<Ast, ParseError>
+    /// BNF:
+    ///     ASSIGN ::= ADD ("=" ASSIGN)?
+    fn parse_assign<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
-        Tokens: Iterator<Item=Token>,
-{
-    let mut lhs = sub_expr_parser(tokens)?;
-    loop {
-        match tokens.peek() {
-            Some(_) => {
-                let op = match op_parser(tokens) {
-                    Ok(op) => op,
-                    Err(_) => break,
-                };
-                let rhs = sub_expr_parser(tokens)?;
+        Tokens: Iterator<Item = Token>,
+    {
+        let lhs = self.parse_add(tokens)?;
+        match tokens.peek().map(|token| &token.value) {
+            Some(TokenKind::Assignment) => {
+                tokens.next();
+                let rhs = self.parse_assign(tokens)?;
                 let loc = lhs.loc.merge(&rhs.loc);
-                lhs = Ast::binop(op, lhs, rhs, loc)
+
+                Ok(Ast::assignment(lhs, rhs, loc))
             }
-            _ => break,
+            _ => Ok(lhs),
         }
     }
-    Ok(lhs)
-}
 
-/// BNF:
-///     ADD ::= MUL ("+" MUL | "-" MUL)*
-fn parse_add<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
-    where
-        Tokens: Iterator<Item=Token>,
-{
-    // Helper function to parse `+` or `-`.
-    fn parse_add_op<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<BinOpKind, ParseError>
-        where
-            Tokens: Iterator<Item=Token>,
-    {
-        let op = tokens
-            .peek()
-            .ok_or(ParseError::Eof)
-            .and_then(|token| match token.value {
-                TokenKind::Plus => Ok(BinOpKind::Add),
-                TokenKind::Minus => Ok(BinOpKind::Sub),
-                _ => Err(ParseError::NotOperator(token.clone())),
-            })?;
-        tokens.next();
-        Ok(op)
-    }
-
-    parse_left_binop(tokens, parse_mul, parse_add_op)
-}
-
-/// BNF:
-///     MUL ::= UNARY ("*" UNARY | "/"UNARY)*
-fn parse_mul<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
-    where
-        Tokens: Iterator<Item=Token>,
-{
-    // Helper function to parse `*` or `/`.
-    fn parse_mul_op<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<BinOpKind, ParseError>
-        where
-            Tokens: Iterator<Item=Token>,
-    {
-        let op = tokens
-            .peek()
-            .ok_or(ParseError::Eof)
-            .and_then(|token| match token.value {
-                TokenKind::Asterisk => Ok(BinOpKind::Mul),
-                TokenKind::Slash => Ok(BinOpKind::Div),
-                _ => Err(ParseError::NotOperator(token.clone())),
-            })?;
-        tokens.next();
-        Ok(op)
-    }
-
-    parse_left_binop(tokens, parse_unary, parse_mul_op)
-}
-
-/// BNF:
-///     UNARY ::= NUMBER | "(" ADD ")"
-fn parse_unary<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
-    where
-        Tokens: Iterator<Item=Token>,
-{
-    match tokens.peek().map(|token| &token.value) {
-        Some(TokenKind::Plus) | Some(TokenKind::Minus) => {
-            let op = match tokens.next() {
-                Some(Token {
-                         value: TokenKind::Plus,
-                         loc,
-                     }) => UniOpKind::Plus,
-                Some(Token {
-                         value: TokenKind::Minus,
-                         loc,
-                     }) => UniOpKind::Minus,
-                _ => unreachable!(),
-            };
-            let node = parse_term(tokens)?;
-            //            let loc = op.loc.merge(&node.loc);
-            let loc = node.loc.clone();
-            Ok(Ast::uniop(op, node, loc))
+    fn expect_semicolon(token: &Token) -> Result<(), ParseError> {
+        match &token.value {
+            TokenKind::Semicolon => Ok(()),
+            _ => Err(ParseError::NoSemicolon),
         }
-        _ => parse_term(tokens),
     }
-}
 
-/// BNF:
-///     NUMBER ::= DIGIT* | VARIABLE
-///     DIGIT  ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
-fn parse_term<Tokens>(tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    /// BNF:
+    ///     ADD ::= MUL ("+" MUL | "-" MUL)*
+    fn parse_add<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
-        Tokens: Iterator<Item=Token>,
-{
-    tokens
-        .next()
-        .ok_or(ParseError::Eof)
-        .and_then(|token| match token.value {
-            TokenKind::Number(n) => Ok(Ast::new(AstKind::Num(n), token.loc)),
-            TokenKind::Identifier(var) => Ok(Ast::new(AstKind::Variable(var), token.loc)),
-            TokenKind::LParen => {
-                let node = parse_add(tokens)?;
-                match tokens.next() {
+        Tokens: Iterator<Item = Token>,
+    {
+        let mut lhs = self.parse_mul(tokens)?;
+        loop {
+            if let Some(TokenKind::Plus) = tokens.peek().map(|token| &token.value) {
+                tokens.next();
+                let rhs = self.parse_mul(tokens)?;
+                let loc = lhs.loc.merge(&rhs.loc);
+                lhs = Ast::binop(BinOpKind::Add, lhs, rhs, loc);
+            } else if let Some(TokenKind::Minus) = tokens.peek().map(|token| &token.value) {
+                tokens.next();
+                let rhs = self.parse_mul(tokens)?;
+                let loc = lhs.loc.merge(&rhs.loc);
+                lhs = Ast::binop(BinOpKind::Sub, lhs, rhs, loc);
+            } else {
+                break;
+            }
+        }
+        Ok(lhs)
+    }
+
+    /// BNF:
+    ///     MUL ::= UNARY ("*" UNARY | "/"UNARY)*
+    fn parse_mul<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    where
+        Tokens: Iterator<Item = Token>,
+    {
+        let mut lhs = self.parse_unary(tokens)?;
+        loop {
+            if let Some(TokenKind::Asterisk) = tokens.peek().map(|token| &token.value) {
+                tokens.next();
+                let rhs = self.parse_unary(tokens)?;
+                let loc = lhs.loc.merge(&rhs.loc);
+                lhs = Ast::binop(BinOpKind::Mul, lhs, rhs, loc);
+            } else if let Some(TokenKind::Slash) = tokens.peek().map(|token| &token.value) {
+                tokens.next();
+                let rhs = self.parse_unary(tokens)?;
+                let loc = lhs.loc.merge(&rhs.loc);
+                lhs = Ast::binop(BinOpKind::Div, lhs, rhs, loc);
+            } else {
+                break;
+            }
+        }
+        Ok(lhs)
+    }
+
+    /// BNF:
+    ///     UNARY ::= NUMBER | "(" ADD ")"
+    fn parse_unary<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    where
+        Tokens: Iterator<Item = Token>,
+    {
+        match tokens.peek().map(|token| &token.value) {
+            Some(TokenKind::Plus) | Some(TokenKind::Minus) => {
+                let op = match tokens.next() {
                     Some(Token {
-                             value: TokenKind::RParen,
-                             ..
-                         }) => Ok(node),
-                    Some(t) => Err(ParseError::RedundantExpression(t)),
-                    _ => Err(ParseError::UnclosedOpenParen(token)),
-                }
+                        value: TokenKind::Plus,
+                        loc,
+                    }) => UniOpKind::Plus,
+                    Some(Token {
+                        value: TokenKind::Minus,
+                        loc,
+                    }) => UniOpKind::Minus,
+                    _ => unreachable!(),
+                };
+                let node = self.parse_term(tokens)?;
+                //            let loc = op.loc.merge(&node.loc);
+                let loc = node.loc.clone();
+                Ok(Ast::uniop(op, node, loc))
             }
-            _ => Err(ParseError::NotExpression(token)),
-        })
+            _ => self.parse_term(tokens),
+        }
+    }
+
+    /// BNF:
+    ///     NUMBER ::= DIGIT* | VARIABLE
+    ///     DIGIT  ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
+    fn parse_term<Tokens>(&self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    where
+        Tokens: Iterator<Item = Token>,
+    {
+        tokens
+            .next()
+            .ok_or(ParseError::Eof)
+            .and_then(|token| match token.value {
+                TokenKind::Number(n) => Ok(Ast::new(AstKind::Num(n), token.loc)),
+                TokenKind::Identifier(var) => Ok(Ast::new(AstKind::Variable(var), token.loc)),
+                TokenKind::LParen => {
+                    let node = self.parse_add(tokens)?;
+                    match tokens.next() {
+                        Some(Token {
+                            value: TokenKind::RParen,
+                            ..
+                        }) => Ok(node),
+                        Some(t) => Err(ParseError::RedundantExpression(t)),
+                        _ => Err(ParseError::UnclosedOpenParen(token)),
+                    }
+                }
+                _ => Err(ParseError::NotExpression(token)),
+            })
+    }
 }
 
-#[macro_use]
+//#[macro_use]
 #[cfg(test)]
 mod tests {
     use crate::lexer::{Lexer, Token, TokenKind};
     use crate::parser::{Ast, AstKind, BinOpKind, UniOpKind};
-    use crate::parser::parse;
+    use crate::parser::Parser;
     use crate::util::Loc;
 
+    #[macro_use]
     #[test]
     fn test_calculate() {
         // (5 + 2) * 31 - -10;
-        let ast = parse(vec![
+        let parser = Parser::new();
+        let ast = parser.parse(vec![
             tokens!(LParen, 0, 1),
             tokens!(Number(5), 1, 2),
             tokens!(Plus, 3, 4),
@@ -361,7 +347,8 @@ mod tests {
 
     #[test]
     fn test_assignment() {
-        let ast = parse(vec![
+        let parser = Parser::new();
+        let ast = parser.parse(vec![
             tokens!(Identifier("abc".to_string()), 0, 3),
             tokens!(Assignment, 4, 5),
             tokens!(Number(3), 6, 7),
@@ -375,6 +362,7 @@ mod tests {
             tokens!(Identifier("def".to_string()), 24, 27),
             tokens!(Semicolon, 27, 28),
         ]);
+        eprintln!("{:#?}", ast);
         assert_eq!(
             ast,
             Ok(vec![

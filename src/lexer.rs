@@ -19,14 +19,17 @@ pub enum TokenKind {
 
 pub type Token = Annotation<TokenKind>;
 
-#[macro_export]
-macro_rules! token {
-    ($token_kind: ident, $start: expr, $end: expr) => {
-        Token::new(TokenKind::$token_kind, Loc($start, $end))
-    };
-    ($token_kind: ident ($var: expr), $start: expr, $end: expr) => {
-        Token::new(TokenKind::$token_kind($var), Loc($start, $end))
-    };
+#[macro_use]
+pub mod macros {
+    //    #[macro_export]
+    macro_rules! token {
+        ($token_kind: ident, $start: expr, $end: expr) => {
+            Token::new(TokenKind::$token_kind, Loc($start, $end))
+        };
+        ($token_kind: ident ($var: expr), $start: expr, $end: expr) => {
+            Token::new(TokenKind::$token_kind($var), Loc($start, $end))
+        };
+    }
 }
 
 impl Token {
@@ -203,7 +206,6 @@ impl<'a> Lexer<'a> {
     }
 }
 
-#[macro_use]
 #[cfg(test)]
 mod tests {
     use crate::lexer::{Lexer, Token, TokenKind};
@@ -269,6 +271,6 @@ mod tests {
         use crate::lexer::LexError;
         let mut lexer = Lexer::new("1 $ 2 * 3 - -10");
         let tokens = lexer.lex();
-        assert_eq!(tokens, Err(LexError::invalid_char('$', Loc(2, 3))), );
+        assert_eq!(tokens, Err(LexError::invalid_char('$', Loc(2, 3))),);
     }
 }
