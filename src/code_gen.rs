@@ -1,5 +1,5 @@
-use crate::parser::{Ast, BinOpKind, Parser, UniOpKind};
 use crate::parser::AstKind::*;
+use crate::parser::{Ast, BinOpKind, Parser, UniOpKind};
 
 macro_rules! ident_val {
     ($ident:expr) => {
@@ -37,7 +37,7 @@ impl Generator {
             )
             .to_string(),
         );
-        self.code.push(format!("  sub rsp, {}", self.parser.offset));
+        self.code.push(format!("  sub rsp, {}", self.parser.stack_offset));
         for ast in asts {
             self.gen(ast);
         }

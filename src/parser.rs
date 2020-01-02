@@ -97,14 +97,14 @@ pub enum ParseError {
 #[derive(Debug, Clone)]
 pub struct Parser {
     pub env: HashMap<String, u64>,
-    pub offset: u64,
+    pub stack_offset: u64,
 }
 
 impl Parser {
     pub fn new() -> Self {
         Parser {
             env: HashMap::new(),
-            offset: 0,
+            stack_offset: 0,
         }
     }
 
@@ -247,8 +247,8 @@ impl Parser {
                     match self.env.get(var.as_str()) {
                         Some(_) => (),
                         None => {
-                            self.offset += 8;
-                            self.env.insert(var.clone(), self.offset);
+                            self.stack_offset += 8;
+                            self.env.insert(var.clone(), self.stack_offset);
                         }
                     }
                     Ok(Ast::new(AstKind::Variable(var), token.loc))
@@ -271,9 +271,9 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::{Lexer, Token, TokenKind};
-    use crate::parser::{Ast, AstKind, BinOpKind, UniOpKind};
+    use crate::lexer::{Token, TokenKind};
     use crate::parser::Parser;
+    use crate::parser::{Ast, BinOpKind, UniOpKind};
     use crate::util::Loc;
 
     #[test]
