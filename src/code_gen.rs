@@ -37,7 +37,8 @@ impl Generator {
             )
             .to_string(),
         );
-        self.code.push(format!("  sub rsp, {}", self.parser.stack_offset));
+        self.code
+            .push(format!("  sub rsp, {}", self.parser.stack_offset));
         for ast in asts {
             self.gen(ast);
         }
