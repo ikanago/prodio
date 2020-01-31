@@ -126,5 +126,6 @@ impl Generator {
         self.gen_lval(val);
         self.code.push("  pop rax".to_string());
         self.code.push("  mov rax, [rax]".to_string());
+        self.code.push("  push rax".to_string());
     }
 }
