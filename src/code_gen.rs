@@ -38,18 +38,13 @@ impl Generator {
     /// Generate assembly code for an IR.
     fn gen(&mut self, ir: &IR) {
         match &ir.op {
+            IROp::Imm => self.code.push(format!("  push {}", ir.lhs.unwrap()).to_string()),
             IROp::Add | IROp::Sub | IROp::Mul | IROp::Div => self.gen_binary_operator(ir),
             IROp::BpOffset => self.gen_bprel(ir),
             IROp::Load => self.gen_load(),
-            IROp::Store => self.gen_store(ir),
+            IROp::Store => self.gen_store(),
             _ => unimplemented!(),
         }
-    }
-
-    fn gen_bprel(&mut self, ir: &IR) {
-        let offset = ir.lhs.expect("Offset from $rbp is not specified.");
-        self.code.push(format!("  lea rax, [rbp-{}]", offset));
-        self.code.push("  push rax".to_string());
     }
 
     /// Generate code for binary operator.
@@ -88,15 +83,18 @@ impl Generator {
     //     self.code.push("  push rax".to_string());
     // }
 
+    fn gen_bprel(&mut self, ir: &IR) {
+        let offset = ir.lhs.expect("Offset from $rbp is not specified.");
+        self.code.push(format!("  lea rax, [rbp-{}]", offset));
+        self.code.push("  push rax".to_string());
+    }
+
     fn gen_load(&mut self) {
         self.code.push("  pop rax\n  mov rax, [rax]\n  push rax".to_string());
     }
 
     /// Generate code for storing value into variable.
-    fn gen_store(&mut self, ir: &IR) {
-        if let Some(imm) = ir.rhs {
-            self.code.push(format!("  push {}", imm).to_string());
-        }
+    fn gen_store(&mut self) {
         self.code
             .push(concat!("  pop rdi\n", "  pop rax").to_string());
         self.code.push("  mov [rax], rdi".to_string());

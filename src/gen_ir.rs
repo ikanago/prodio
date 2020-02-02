@@ -18,6 +18,7 @@ macro_rules! ident_val {
 /// Kinds of IR operand.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IROp {
+    Imm,
     Add,
     Sub,
     Mul,
@@ -67,12 +68,18 @@ impl IRGenerator {
     /// Generate IR for an AST.
     fn gen_expr(&mut self, ast: &Ast) -> Option<u64> {
         match &ast.value {
-            Num(n) => Some(*n),
+            Num(n) => self.gen_ir_immidiate(*n),
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
             Assignment { lhs, rhs } => self.gen_ir_assignment(lhs, rhs),
             Variable(val) => self.gen_ir_variable(val),
         }
+    }
+
+    fn gen_ir_immidiate(&mut self, n: u64) -> Option<u64> {
+        let ir = IR::new(IROp::Imm, Some(n), None);
+        self.ir_vec.push(ir);
+        Some(n)
     }
 
     fn gen_ir_binary_operator(&mut self, op: BinOpKind, lhs: &Ast, rhs: &Ast) -> Option<u64> {
