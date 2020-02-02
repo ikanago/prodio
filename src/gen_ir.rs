@@ -5,16 +5,6 @@ use crate::parser::AstKind::*;
 use crate::parser::{Ast, BinOpKind, Parser, UniOpKind};
 
 
-
-macro_rules! ident_val {
-    ($ident:expr) => {
-        match &$ident {
-            Variable(val) => val.clone(),
-            _ => String::new(),
-        }
-    };
-}
-
 /// Kinds of IR operand.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IROp {
@@ -148,8 +138,10 @@ mod tests {
 
         let ir_vec = vec![
             IR::new(IROp::BpOffset, Some(8), None),
+            IR::new(IROp::Imm, Some(3), None),
             IR::new(IROp::Store, Some(8), Some(3)),
             IR::new(IROp::BpOffset, Some(16), None),
+            IR::new(IROp::Imm, Some(5), None),
             IR::new(IROp::Store, Some(16), Some(5)),
             IR::new(IROp::BpOffset, Some(8), None),
             IR::new(IROp::Load, None, None),

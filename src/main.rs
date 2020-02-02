@@ -3,7 +3,7 @@ extern crate clap;
 
 use clap::{App, Arg};
 use prodio::code_gen::Generator;
-use prodio::dump_ir;
+use prodio::dump_info;
 use prodio::gen_ir;
 use prodio::lexer::Lexer;
 use prodio::parser::Parser;
@@ -19,6 +19,13 @@ fn main() {
                 .value_name("CODE")
                 .help("Raw source code in one line.")
                 .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("dump-tokens")
+                .long("--dump-tokens")
+                .value_name("DUMP-TOKENS")
+                .help("Dump tokens.")
+                .takes_value(false),
         )
         .arg(
             Arg::with_name("dump-ir")
@@ -38,14 +45,17 @@ fn main() {
         let mut ir_generator = gen_ir::IRGenerator::new(parser);
         ir_generator.gen_ir(&ast);
 
+        if matches.is_present("dump-tokens") {
+            dump_info::dump_tokens(&tokens);
+        }
         if matches.is_present("dump-ir") {
-            dump_ir::dump(&ir_generator.ir_vec);
-        } else {
-            let mut generator = Generator::new();
-            generator.code_gen(&ir_generator.ir_vec, stack_offset);
-            for code in generator.code {
-                println!("{}", code);
-            }
+            dump_info::dump_ir(&ir_generator.ir_vec);
+        }
+
+        let mut generator = Generator::new();
+        generator.code_gen(&ir_generator.ir_vec, stack_offset);
+        for code in generator.code {
+            println!("{}", code);
         }
     }
 }
