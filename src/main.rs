@@ -34,14 +34,15 @@ fn main() {
         let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new();
         let ast = parser.parse(tokens.to_vec()).unwrap();
+        let stack_offset = parser.stack_offset;
+        let mut ir_generator = gen_ir::IRGenerator::new(parser);
+        ir_generator.gen_ir(&ast);
 
         if matches.is_present("dump-ir") {
-            let mut ir_generator = gen_ir::IRGenerator::new(parser);
-            ir_generator.gen_ir(&ast);
-            dump_ir::dump(ir_generator.ir_vec);
+            dump_ir::dump(&ir_generator.ir_vec);
         } else {
-            let mut generator = Generator::new(parser);
-            generator.code_gen(&ast);
+            let mut generator = Generator::new();
+            generator.code_gen(&ir_generator.ir_vec, stack_offset);
             for code in generator.code {
                 println!("{}", code);
             }

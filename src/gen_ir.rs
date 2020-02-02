@@ -4,6 +4,17 @@ use std::collections::HashMap;
 use crate::parser::AstKind::*;
 use crate::parser::{Ast, BinOpKind, Parser, UniOpKind};
 
+
+
+macro_rules! ident_val {
+    ($ident:expr) => {
+        match &$ident {
+            Variable(val) => val.clone(),
+            _ => String::new(),
+        }
+    };
+}
+
 /// Kinds of IR operand.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IROp {

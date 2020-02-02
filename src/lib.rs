@@ -1,4 +1,3 @@
-#[macro_use]
 pub mod code_gen;
 pub mod dump_ir;
 pub mod lexer;
