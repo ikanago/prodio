@@ -21,10 +21,17 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("dump-tokens")
-                .long("--dump-tokens")
-                .value_name("DUMP-TOKENS")
+            Arg::with_name("dump-token")
+                .long("--dump-token")
+                .value_name("DUMP-TOKEN")
                 .help("Dump tokens.")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("dump-ast")
+                .long("--dump-ast")
+                .value_name("DUMP-AST")
+                .help("Dump AST.")
                 .takes_value(false),
         )
         .arg(
@@ -40,13 +47,16 @@ fn main() {
         let mut lexer = Lexer::new(&raw_code);
         let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new();
-        let ast = parser.parse(tokens.to_vec()).unwrap();
+        let asts = parser.parse(tokens.to_vec()).unwrap();
         let stack_offset = parser.stack_offset;
         let mut ir_generator = gen_ir::IRGenerator::new(parser);
-        ir_generator.gen_ir(&ast);
+        ir_generator.gen_ir(&asts);
 
-        if matches.is_present("dump-tokens") {
+        if matches.is_present("dump-token") {
             dump_info::dump_tokens(&tokens);
+        }
+        if matches.is_present("dump-ast") {
+            dump_info::dump_asts(&asts);
         }
         if matches.is_present("dump-ir") {
             dump_info::dump_ir(&ir_generator.ir_vec);
