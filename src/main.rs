@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate clap;
 
-use clap::{App, Arg};
 use prodio::code_gen::Generator;
 use prodio::dump_info;
 use prodio::gen_ir;
@@ -9,41 +8,17 @@ use prodio::lexer::Lexer;
 use prodio::parser::Parser;
 
 fn main() {
-    let matches = App::new(crate_name!())
-        .version(crate_version!())
-        .author(crate_authors!())
-        .about(crate_description!())
-        .arg(
-            Arg::with_name("code")
-                .long("--code")
-                .value_name("CODE")
-                .help("Raw source code in one line.")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("dump-token")
-                .long("--dump-token")
-                .value_name("DUMP-TOKEN")
-                .help("Dump tokens.")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name("dump-ast")
-                .long("--dump-ast")
-                .value_name("DUMP-AST")
-                .help("Dump AST.")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name("dump-ir")
-                .long("--dump-ir")
-                .value_name("DUMP-IR")
-                .help("Dump inner representation.")
-                .takes_value(false),
-        )
-        .get_matches();
+    let matches = clap_app!(prodio => 
+        (version: crate_version!())
+        (author: crate_authors!())
+        (about: crate_description!())
+        (@arg CODE: +required "Raw source code in one line.")
+        (@arg dump_token: --("dump-token") "Dump tokens into stderr.")
+        (@arg dump_ast: --("dump-ast") "Dump AST into stderr.")
+        (@arg dump_ir: --("dump-ir") "Dump inner representation into stderr.")
+    ).get_matches();
 
-    if let Some(ref raw_code) = matches.value_of("code") {
+    if let Some(ref raw_code) = matches.value_of("CODE") {
         let mut lexer = Lexer::new(&raw_code);
         let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new();
@@ -52,13 +27,13 @@ fn main() {
         let mut ir_generator = gen_ir::IRGenerator::new(parser);
         ir_generator.gen_ir(&asts);
 
-        if matches.is_present("dump-token") {
+        if matches.is_present("dump_token") {
             dump_info::dump_tokens(&tokens);
         }
-        if matches.is_present("dump-ast") {
+        if matches.is_present("dump_ast") {
             dump_info::dump_asts(&asts);
         }
-        if matches.is_present("dump-ir") {
+        if matches.is_present("dump_ir") {
             dump_info::dump_ir(&ir_generator.ir_vec);
         }
 

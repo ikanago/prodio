@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use crate::parser::AstKind::*;
 use crate::parser::{Ast, BinOpKind, Parser, UniOpKind};
 
-
 /// Kinds of IR operand.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IROp {

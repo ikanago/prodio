@@ -1,5 +1,4 @@
-use crate::gen_ir::{IR, IROp};
-
+use crate::gen_ir::{IROp, IR};
 
 /// Struct for retain generated code.
 #[derive(Debug, Clone)]
@@ -9,9 +8,7 @@ pub struct Generator {
 
 impl Generator {
     pub fn new() -> Self {
-        Generator {
-            code: Vec::new(),
-        }
+        Generator { code: Vec::new() }
     }
 
     /// Entry point of code generation.
@@ -26,8 +23,7 @@ impl Generator {
             )
             .to_string(),
         );
-        self.code
-            .push(format!("  sub rsp, {}", stack_offset));
+        self.code.push(format!("  sub rsp, {}", stack_offset));
         for ir in ir_vec {
             self.gen(ir);
         }
@@ -38,7 +34,9 @@ impl Generator {
     /// Generate assembly code for an IR.
     fn gen(&mut self, ir: &IR) {
         match &ir.op {
-            IROp::Imm => self.code.push(format!("  push {}", ir.lhs.unwrap()).to_string()),
+            IROp::Imm => self
+                .code
+                .push(format!("  push {}", ir.lhs.unwrap()).to_string()),
             IROp::Add | IROp::Sub | IROp::Mul | IROp::Div => self.gen_binary_operator(ir),
             IROp::BpOffset => self.gen_bprel(ir),
             IROp::Load => self.gen_load(),
@@ -90,7 +88,8 @@ impl Generator {
     }
 
     fn gen_load(&mut self) {
-        self.code.push("  pop rax\n  mov rax, [rax]\n  push rax".to_string());
+        self.code
+            .push("  pop rax\n  mov rax, [rax]\n  push rax".to_string());
     }
 
     /// Generate code for storing value into variable.
