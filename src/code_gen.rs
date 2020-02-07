@@ -38,10 +38,10 @@ impl Generator {
                 .code
                 .push(format!("  push {}", ir.lhs.unwrap()).to_string()),
             IROp::Add | IROp::Sub | IROp::Mul | IROp::Div => self.gen_binary_operator(ir),
+            IROp::Plus | IROp::Minus => self.gen_unary_operator(ir),
             IROp::BpOffset => self.gen_bprel(ir),
             IROp::Load => self.gen_load(),
             IROp::Store => self.gen_store(),
-            _ => unimplemented!(),
         }
     }
 
@@ -65,21 +65,19 @@ impl Generator {
     }
 
     /// Generate code for unary operator.
-    // fn gen_unary_operator(&mut self, op: UniOpKind, node: &Ast) {
-    //     match op {
-    //         UniOpKind::Plus => {
-    //             self.gen(node);
-    //             self.code.push("  pop rax".to_string());
-    //         }
-    //         UniOpKind::Minus => {
-    //             self.code.push("  mov rax 0".to_string());
-    //             self.gen(node);
-    //             self.code.push("  pop rdi".to_string());
-    //             self.code.push("  sub rax, rdi".to_string());
-    //         }
-    //     }
-    //     self.code.push("  push rax".to_string());
-    // }
+    fn gen_unary_operator(&mut self, ir: &IR) {
+        match ir.op {
+            IROp::Plus => {
+                self.code.push("  pop rax".to_string());
+            }
+            IROp::Minus => {
+                self.code.push("  pop rax".to_string());
+                self.code.push("  neg rax".to_string());
+            }
+            _ => unreachable!(),
+        }
+        self.code.push("  push rax".to_string());
+    }
 
     fn gen_bprel(&mut self, ir: &IR) {
         let offset = ir.lhs.expect("Offset from $rbp is not specified.");

@@ -127,7 +127,7 @@ mod tests {
     use crate::parser::Parser;
     #[test]
     fn test_assignment() {
-        let code = "abc = 3; def = 5; abc + def;";
+        let code = "a = 3; b = 4; c = 2; d = a + b * -c; d;";
         let mut lexer = Lexer::new(code);
         let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new();
@@ -140,13 +140,24 @@ mod tests {
             IR::new(IROp::Imm, Some(3), None),
             IR::new(IROp::Store, Some(8), Some(3)),
             IR::new(IROp::BpOffset, Some(16), None),
-            IR::new(IROp::Imm, Some(5), None),
-            IR::new(IROp::Store, Some(16), Some(5)),
+            IR::new(IROp::Imm, Some(4), None),
+            IR::new(IROp::Store, Some(16), Some(4)),
+            IR::new(IROp::BpOffset, Some(24), None),
+            IR::new(IROp::Imm, Some(2), None),
+            IR::new(IROp::Store, Some(24), Some(2)),
+            IR::new(IROp::BpOffset, Some(32), None),
             IR::new(IROp::BpOffset, Some(8), None),
             IR::new(IROp::Load, None, None),
             IR::new(IROp::BpOffset, Some(16), None),
             IR::new(IROp::Load, None, None),
-            IR::new(IROp::Add, Some(8), Some(16)),
+            IR::new(IROp::BpOffset, Some(24), None),
+            IR::new(IROp::Load, None, None),
+            IR::new(IROp::Minus, Some(24), None),
+            IR::new(IROp::Mul, Some(16), None),
+            IR::new(IROp::Add, Some(8), None),
+            IR::new(IROp::Store, Some(32), None),
+            IR::new(IROp::BpOffset, Some(32), None),
+            IR::new(IROp::Load, None, None),
         ];
         assert_eq!(ir_generator.ir_vec, ir_vec)
     }
