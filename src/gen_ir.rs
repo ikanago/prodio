@@ -37,7 +37,12 @@ impl IR {
 #[derive(Debug, Clone)]
 pub struct IRGenerator {
     pub ir_vec: Vec<IR>,
-    pub variable_map: HashMap<String, u64>, // Lookup table of variable offset from $rbp.
+    // HashMap of variable offset from $rbp.
+    pub variable_map: HashMap<String, u64>,
+    // HashMap of which register each variable(represented by offset) is stored.
+    pub variable_reg_map: HashMap<u64, u64>,
+    // Used register count in a AST.
+    reg_count: u64,
 }
 
 impl IRGenerator {
@@ -45,12 +50,15 @@ impl IRGenerator {
         IRGenerator {
             ir_vec: Vec::new(),
             variable_map: parser.env,
+            variable_reg_map: HashMap::new(),
+            reg_count: 0,
         }
     }
 
     pub fn gen_ir(&mut self, asts: &Vec<Ast>) {
         for ast in asts {
             self.gen_expr(ast);
+            self.reg_count = 0;
         }
     }
 
@@ -66,23 +74,24 @@ impl IRGenerator {
     }
 
     fn gen_ir_immidiate(&mut self, n: u64) -> Option<u64> {
-        let ir = IR::new(IROp::Imm, Some(n), None);
+        self.reg_count += 1;
+        let ir = IR::new(IROp::Imm, Some(self.reg_count), Some(n));
         self.ir_vec.push(ir);
-        Some(n)
+        Some(self.reg_count)
     }
 
     fn gen_ir_binary_operator(&mut self, op: BinOpKind, lhs: &Ast, rhs: &Ast) -> Option<u64> {
-        let lhs = self.gen_expr(lhs);
-        let rhs = self.gen_expr(rhs);
+        let reg_lhs = self.gen_expr(lhs);
+        let reg_rhs = self.gen_expr(rhs);
 
         let ir = match op {
-            BinOpKind::Add => IR::new(IROp::Add, lhs, rhs),
-            BinOpKind::Sub => IR::new(IROp::Sub, lhs, rhs),
-            BinOpKind::Mul => IR::new(IROp::Mul, lhs, rhs),
-            BinOpKind::Div => IR::new(IROp::Div, lhs, rhs),
+            BinOpKind::Add => IR::new(IROp::Add, reg_lhs, reg_rhs),
+            BinOpKind::Sub => IR::new(IROp::Sub, reg_lhs, reg_rhs),
+            BinOpKind::Mul => IR::new(IROp::Mul, reg_lhs, reg_rhs),
+            BinOpKind::Div => IR::new(IROp::Div, reg_lhs, reg_rhs),
         };
         self.ir_vec.push(ir);
-        None
+        reg_lhs
     }
 
     fn gen_ir_unary_operator(&mut self, op: UniOpKind, node: &Ast) -> Option<u64> {
@@ -93,30 +102,34 @@ impl IRGenerator {
             UniOpKind::Minus => IR::new(IROp::Minus, node, None),
         };
         self.ir_vec.push(ir);
-        None
+        node
     }
 
     fn gen_ir_assignment(&mut self, lhs: &Ast, rhs: &Ast) -> Option<u64> {
         let val_name = ident_val!(&lhs.value);
-        let lhs = self.gen_ir_lval(&val_name);
-        let rhs = self.gen_expr(rhs);
-        let ir = IR::new(IROp::Store, lhs, rhs);
+        let reg_lhs = self.gen_ir_lval(&val_name);
+        let reg_rhs = self.gen_expr(rhs);
+        let ir = IR::new(IROp::Store, reg_lhs, reg_rhs);
         self.ir_vec.push(ir);
-        None
+
+        let offset = self.variable_map.get(&val_name).unwrap();
+        self.variable_reg_map.insert(*offset, reg_lhs.unwrap());
+        reg_lhs
     }
 
     fn gen_ir_lval(&mut self, val: &String) -> Option<u64> {
         let offset = self.variable_map.get(val).unwrap();
-        let ir = IR::new(IROp::BpOffset, Some(*offset), None);
-        self.ir_vec.push(ir);
+        // let ir = IR::new(IROp::BpOffset, Some(*offset), None);
+        // self.ir_vec.push(ir);
         Some(*offset)
     }
 
     fn gen_ir_variable(&mut self, val: &String) -> Option<u64> {
+        self.reg_count += 1;
         let var_offset = self.gen_ir_lval(val);
-        let ir = IR::new(IROp::Load, None, None);
+        let ir = IR::new(IROp::Load, Some(self.reg_count), var_offset);
         self.ir_vec.push(ir);
-        var_offset
+        Some(self.reg_count)
     }
 }
 
@@ -136,28 +149,20 @@ mod tests {
         ir_generator.gen_ir(&ast);
 
         let ir_vec = vec![
-            IR::new(IROp::BpOffset, Some(8), None),
-            IR::new(IROp::Imm, Some(3), None),
-            IR::new(IROp::Store, Some(8), Some(3)),
-            IR::new(IROp::BpOffset, Some(16), None),
-            IR::new(IROp::Imm, Some(4), None),
-            IR::new(IROp::Store, Some(16), Some(4)),
-            IR::new(IROp::BpOffset, Some(24), None),
-            IR::new(IROp::Imm, Some(2), None),
-            IR::new(IROp::Store, Some(24), Some(2)),
-            IR::new(IROp::BpOffset, Some(32), None),
-            IR::new(IROp::BpOffset, Some(8), None),
-            IR::new(IROp::Load, None, None),
-            IR::new(IROp::BpOffset, Some(16), None),
-            IR::new(IROp::Load, None, None),
-            IR::new(IROp::BpOffset, Some(24), None),
-            IR::new(IROp::Load, None, None),
-            IR::new(IROp::Minus, Some(24), None),
-            IR::new(IROp::Mul, Some(16), None),
-            IR::new(IROp::Add, Some(8), None),
-            IR::new(IROp::Store, Some(32), None),
-            IR::new(IROp::BpOffset, Some(32), None),
-            IR::new(IROp::Load, None, None),
+            IR::new(IROp::Imm, Some(1), Some(3)),
+            IR::new(IROp::Store, Some(8), Some(1)),
+            IR::new(IROp::Imm, Some(1), Some(4)),
+            IR::new(IROp::Store, Some(16), Some(1)),
+            IR::new(IROp::Imm, Some(1), Some(2)),
+            IR::new(IROp::Store, Some(24), Some(1)),
+            IR::new(IROp::Load, Some(1), Some(8)),
+            IR::new(IROp::Load, Some(2), Some(16)),
+            IR::new(IROp::Load, Some(3), Some(24)),
+            IR::new(IROp::Minus, Some(3), None),
+            IR::new(IROp::Mul, Some(2), Some(3)),
+            IR::new(IROp::Add, Some(1), Some(2)),
+            IR::new(IROp::Store, Some(32), Some(1)),
+            IR::new(IROp::Load, Some(1), Some(32)),
         ];
         assert_eq!(ir_generator.ir_vec, ir_vec)
     }
