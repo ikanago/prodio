@@ -14,20 +14,10 @@ pub enum TokenKind {
     Identifier(String),
     Semicolon,
     Assignment,
-    Number(u64),
+    Number(usize),
 }
 
 pub type Token = Annotation<TokenKind>;
-
-#[macro_export]
-macro_rules! token {
-    ($token_kind: ident, $start: expr, $end: expr) => {
-        Token::new(TokenKind::$token_kind, Loc($start, $end))
-    };
-    ($token_kind: ident ($var: expr), $start: expr, $end: expr) => {
-        Token::new(TokenKind::$token_kind($var), Loc($start, $end))
-    };
-}
 
 impl Token {
     pub fn plus(loc: Loc) -> Self {
@@ -58,7 +48,7 @@ impl Token {
         Self::new(TokenKind::Identifier(ident), loc)
     }
 
-    pub fn number(n: u64, loc: Loc) -> Self {
+    pub fn number(n: usize, loc: Loc) -> Self {
         Self::new(TokenKind::Number(n), loc)
     }
 }

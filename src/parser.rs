@@ -7,7 +7,7 @@ use crate::util::{Annotation, Loc};
 /// Data type of AST node.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AstKind {
-    Num(u64),
+    Num(usize),
     UniOp {
         op: UniOpKind,
         node: Box<Ast>,
@@ -27,7 +27,7 @@ pub enum AstKind {
 pub type Ast = Annotation<AstKind>;
 
 impl Ast {
-    pub fn num(n: u64, loc: Loc) -> Self {
+    pub fn num(n: usize, loc: Loc) -> Self {
         Self::new(AstKind::Num(n), loc)
     }
 
@@ -96,8 +96,8 @@ pub enum ParseError {
 
 #[derive(Debug, Clone)]
 pub struct Parser {
-    pub env: HashMap<String, u64>,
-    pub stack_offset: u64,
+    pub env: HashMap<String, usize>,
+    pub stack_offset: usize,
 }
 
 impl Parser {
@@ -271,28 +271,18 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::{Token, TokenKind};
+    use crate::lexer::Lexer;
     use crate::parser::Parser;
     use crate::parser::{Ast, BinOpKind, UniOpKind};
     use crate::util::Loc;
 
     #[test]
     fn test_calculate() {
-        // (5 + 2) * 31 - -10;
+        let code = "(5 + 2) * 31 - -10;";
+        let mut lexer = Lexer::new(code);
+        let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new();
-        let ast = parser.parse(vec![
-            token!(LParen, 0, 1),
-            token!(Number(5), 1, 2),
-            token!(Plus, 3, 4),
-            token!(Number(2), 5, 6),
-            token!(RParen, 6, 7),
-            token!(Asterisk, 8, 9),
-            token!(Number(31), 10, 12),
-            token!(Minus, 13, 14),
-            token!(Minus, 15, 16),
-            token!(Number(10), 16, 18),
-            token!(Semicolon, 18, 19),
-        ]);
+        let ast = parser.parse(tokens.to_vec());
         assert_eq!(
             ast,
             Ok(vec![Ast::binop(
@@ -316,23 +306,11 @@ mod tests {
 
     #[test]
     fn test_assignment() {
-        // abc = 3; def = 5; abc + def;
+        let code = "abc = 3; def = 5; abc + def;";
+        let mut lexer = Lexer::new(code);
+        let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new();
-        let ast = parser.parse(vec![
-            token!(Identifier("abc".to_string()), 0, 3),
-            token!(Assignment, 4, 5),
-            token!(Number(3), 6, 7),
-            token!(Semicolon, 7, 8),
-            token!(Identifier("def".to_string()), 9, 12),
-            token!(Assignment, 13, 14),
-            token!(Number(5), 15, 16),
-            token!(Semicolon, 16, 17),
-            token!(Identifier("abc".to_string()), 18, 21),
-            token!(Plus, 22, 23),
-            token!(Identifier("def".to_string()), 24, 27),
-            token!(Semicolon, 27, 28),
-        ]);
-        eprintln!("{:#?}", ast);
+        let ast = parser.parse(tokens.to_vec());
         assert_eq!(
             ast,
             Ok(vec![
