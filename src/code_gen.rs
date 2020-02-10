@@ -31,7 +31,8 @@ impl Generator {
         for ir in ir_vec {
             result_register = self.gen(ir);
         }
-        self.code.push(format!("  mov rax, {}", REGISTERS[result_register]));
+        self.code
+            .push(format!("  mov rax, {}", REGISTERS[result_register]));
         self.code
             .push(("  mov rsp, rbp\n  pop rbp\n  ret").to_string());
     }
@@ -51,28 +52,39 @@ impl Generator {
     /// Generate code for storing immidiate to a register.
     fn gen_immidiate(&mut self, ir: &IR) -> usize {
         let reg_count = ir.lhs.unwrap();
-        self.code
-            .push(format!("  mov {}, {}", REGISTERS[reg_count], ir.rhs.unwrap()));
+        self.code.push(format!(
+            "  mov {}, {}",
+            REGISTERS[reg_count],
+            ir.rhs.unwrap()
+        ));
         reg_count
     }
 
     /// Generate code for binary operator.
-    fn gen_binary_operator(&mut self, ir: &IR) -> usize{
+    fn gen_binary_operator(&mut self, ir: &IR) -> usize {
         let lhs_reg_count = ir.lhs.unwrap();
         let rhs_reg_count = ir.rhs.unwrap();
         match ir.op {
-            IROp::Add => self
-                .code
-                .push(format!("  add {}, {}", REGISTERS[lhs_reg_count], REGISTERS[rhs_reg_count])),
-            IROp::Sub => self
-                .code
-                .push(format!("  sub {}, {}", REGISTERS[lhs_reg_count], REGISTERS[rhs_reg_count])),
-            IROp::Mul => self
-                .code
-                .push(format!("  imul {}, {}", REGISTERS[lhs_reg_count], REGISTERS[rhs_reg_count])),
+            IROp::Add => self.code.push(format!(
+                "  add {}, {}",
+                REGISTERS[lhs_reg_count], REGISTERS[rhs_reg_count]
+            )),
+            IROp::Sub => self.code.push(format!(
+                "  sub {}, {}",
+                REGISTERS[lhs_reg_count], REGISTERS[rhs_reg_count]
+            )),
+            IROp::Mul => self.code.push(format!(
+                "  imul {}, {}",
+                REGISTERS[lhs_reg_count], REGISTERS[rhs_reg_count]
+            )),
             IROp::Div => {
-                self.code.push("  mov rdx, 0".to_string());
-                self.code.push("  div rdi".to_string());
+                self.code
+                    .push(format!("  mov rax, {}", REGISTERS[lhs_reg_count]));
+                self.code.push("  cqo".to_string());
+                self.code
+                    .push(format!("  idiv {}", REGISTERS[rhs_reg_count]));
+                // Because operand of `idiv` is rhs in division.
+                return rhs_reg_count;
             }
             _ => unreachable!(),
         }
@@ -94,7 +106,7 @@ impl Generator {
         reg_count
     }
 
-    fn gen_bprel(&mut self, ir: &IR) -> usize{
+    fn gen_bprel(&mut self, ir: &IR) -> usize {
         let offset = ir.lhs.expect("Offset from $rbp is not specified.");
         self.code.push(format!("  lea rax, [rbp-{}]", offset));
         self.code.push("  push rax".to_string());
