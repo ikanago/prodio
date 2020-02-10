@@ -8,7 +8,7 @@ use prodio::lexer::Lexer;
 use prodio::parser::Parser;
 
 fn main() {
-    let matches = clap_app!(prodio => 
+    let matches = clap_app!(prodio =>
         (version: crate_version!())
         (author: crate_authors!())
         (about: crate_description!())
@@ -16,7 +16,8 @@ fn main() {
         (@arg dump_token: --("dump-token") "Dump tokens into stderr.")
         (@arg dump_ast: --("dump-ast") "Dump AST into stderr.")
         (@arg dump_ir: --("dump-ir") "Dump inner representation into stderr.")
-    ).get_matches();
+    )
+    .get_matches();
 
     if let Some(ref raw_code) = matches.value_of("CODE") {
         let mut lexer = Lexer::new(&raw_code);

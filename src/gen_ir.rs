@@ -23,12 +23,12 @@ pub enum IROp {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IR {
     pub op: IROp,
-    pub lhs: Option<u64>,
-    pub rhs: Option<u64>,
+    pub lhs: Option<usize>,
+    pub rhs: Option<usize>,
 }
 
 impl IR {
-    pub fn new(op: IROp, lhs: Option<u64>, rhs: Option<u64>) -> Self {
+    pub fn new(op: IROp, lhs: Option<usize>, rhs: Option<usize>) -> Self {
         IR { op, lhs, rhs }
     }
 }
@@ -38,11 +38,11 @@ impl IR {
 pub struct IRGenerator {
     pub ir_vec: Vec<IR>,
     // HashMap of variable offset from $rbp.
-    pub variable_map: HashMap<String, u64>,
+    pub variable_map: HashMap<String, usize>,
     // HashMap of which register each variable(represented by offset) is stored.
-    pub variable_reg_map: HashMap<u64, u64>,
+    pub variable_reg_map: HashMap<usize, usize>,
     // Used register count in a AST.
-    reg_count: u64,
+    reg_count: usize,
 }
 
 impl IRGenerator {
@@ -63,7 +63,7 @@ impl IRGenerator {
     }
 
     /// Generate IR for an AST.
-    fn gen_expr(&mut self, ast: &Ast) -> Option<u64> {
+    fn gen_expr(&mut self, ast: &Ast) -> Option<usize> {
         match &ast.value {
             Num(n) => self.gen_ir_immidiate(*n),
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
@@ -73,14 +73,14 @@ impl IRGenerator {
         }
     }
 
-    fn gen_ir_immidiate(&mut self, n: u64) -> Option<u64> {
+    fn gen_ir_immidiate(&mut self, n: usize) -> Option<usize> {
         self.reg_count += 1;
         let ir = IR::new(IROp::Imm, Some(self.reg_count), Some(n));
         self.ir_vec.push(ir);
         Some(self.reg_count)
     }
 
-    fn gen_ir_binary_operator(&mut self, op: BinOpKind, lhs: &Ast, rhs: &Ast) -> Option<u64> {
+    fn gen_ir_binary_operator(&mut self, op: BinOpKind, lhs: &Ast, rhs: &Ast) -> Option<usize> {
         let reg_lhs = self.gen_expr(lhs);
         let reg_rhs = self.gen_expr(rhs);
 
@@ -94,7 +94,7 @@ impl IRGenerator {
         reg_lhs
     }
 
-    fn gen_ir_unary_operator(&mut self, op: UniOpKind, node: &Ast) -> Option<u64> {
+    fn gen_ir_unary_operator(&mut self, op: UniOpKind, node: &Ast) -> Option<usize> {
         let node = self.gen_expr(node);
 
         let ir = match op {
@@ -105,7 +105,7 @@ impl IRGenerator {
         node
     }
 
-    fn gen_ir_assignment(&mut self, lhs: &Ast, rhs: &Ast) -> Option<u64> {
+    fn gen_ir_assignment(&mut self, lhs: &Ast, rhs: &Ast) -> Option<usize> {
         let val_name = ident_val!(&lhs.value);
         let reg_lhs = self.gen_ir_lval(&val_name);
         let reg_rhs = self.gen_expr(rhs);
@@ -117,14 +117,14 @@ impl IRGenerator {
         reg_lhs
     }
 
-    fn gen_ir_lval(&mut self, val: &String) -> Option<u64> {
+    fn gen_ir_lval(&mut self, val: &String) -> Option<usize> {
         let offset = self.variable_map.get(val).unwrap();
         // let ir = IR::new(IROp::BpOffset, Some(*offset), None);
         // self.ir_vec.push(ir);
         Some(*offset)
     }
 
-    fn gen_ir_variable(&mut self, val: &String) -> Option<u64> {
+    fn gen_ir_variable(&mut self, val: &String) -> Option<usize> {
         self.reg_count += 1;
         let var_offset = self.gen_ir_lval(val);
         let ir = IR::new(IROp::Load, Some(self.reg_count), var_offset);

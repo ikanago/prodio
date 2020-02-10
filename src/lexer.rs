@@ -14,7 +14,7 @@ pub enum TokenKind {
     Identifier(String),
     Semicolon,
     Assignment,
-    Number(u64),
+    Number(usize),
 }
 
 pub type Token = Annotation<TokenKind>;
@@ -48,7 +48,7 @@ impl Token {
         Self::new(TokenKind::Identifier(ident), loc)
     }
 
-    pub fn number(n: u64, loc: Loc) -> Self {
+    pub fn number(n: usize, loc: Loc) -> Self {
         Self::new(TokenKind::Number(n), loc)
     }
 }

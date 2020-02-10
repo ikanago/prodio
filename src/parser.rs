@@ -7,7 +7,7 @@ use crate::util::{Annotation, Loc};
 /// Data type of AST node.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AstKind {
-    Num(u64),
+    Num(usize),
     UniOp {
         op: UniOpKind,
         node: Box<Ast>,
@@ -27,7 +27,7 @@ pub enum AstKind {
 pub type Ast = Annotation<AstKind>;
 
 impl Ast {
-    pub fn num(n: u64, loc: Loc) -> Self {
+    pub fn num(n: usize, loc: Loc) -> Self {
         Self::new(AstKind::Num(n), loc)
     }
 
@@ -96,8 +96,8 @@ pub enum ParseError {
 
 #[derive(Debug, Clone)]
 pub struct Parser {
-    pub env: HashMap<String, u64>,
-    pub stack_offset: u64,
+    pub env: HashMap<String, usize>,
+    pub stack_offset: usize,
 }
 
 impl Parser {
