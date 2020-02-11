@@ -22,6 +22,9 @@ pub enum AstKind {
         rhs: Box<Ast>,
     },
     Variable(String),
+    Return {
+        expr: Box<Ast>,
+    },
 }
 
 pub type Ast = Annotation<AstKind>;
@@ -109,13 +112,11 @@ impl Parser {
     }
 
     /// Parse tokens and build AST.
-    /// BNF:
-    ///     EXPR ::= ADD
     pub fn parse(&mut self, tokens: Vec<Token>) -> Result<Vec<Ast>, ParseError> {
         let mut tokens = tokens.into_iter().peekable();
         let mut asts = Vec::new();
         loop {
-            let ast = self.parse_assign(&mut tokens)?;
+            let ast = self.parse_stmt(&mut tokens)?;
             Parser::expect_semicolon(&tokens.next().unwrap())?;
             asts.push(ast);
             match tokens.peek() {
@@ -124,6 +125,28 @@ impl Parser {
             }
         }
         Ok(asts)
+    }
+
+    /// BNF:
+    ///     STMT ::= ASSIGN | "return" ASSIGN
+    fn parse_stmt<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    where
+        Tokens: Iterator<Item = Token>,
+    {
+        match tokens.peek().map(|token| &token.value) {
+            Some(TokenKind::Return) => {
+                tokens.next();
+                let expr = self.parse_assign(tokens)?;
+                let loc = &expr.loc;
+                Ok(Ast::new(
+                    AstKind::Return {
+                        expr: Box::new(expr.clone()),
+                    },
+                    loc.clone(),
+                ))
+            }
+            _ => self.parse_assign(tokens),
+        }
     }
 
     /// BNF:

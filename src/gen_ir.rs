@@ -17,6 +17,7 @@ pub enum IROp {
     BpOffset, // Load variable offset from $rbp.
     Load,
     Store,
+    Return,
 }
 
 /// Inner representation.
@@ -70,6 +71,7 @@ impl IRGenerator {
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
             Assignment { lhs, rhs } => self.gen_ir_assignment(lhs, rhs),
             Variable(val) => self.gen_ir_variable(val),
+            Return { expr } => self.gen_ir_return(expr),
         }
     }
 
@@ -130,6 +132,13 @@ impl IRGenerator {
         let ir = IR::new(IROp::Load, Some(self.reg_count), var_offset);
         self.ir_vec.push(ir);
         Some(self.reg_count)
+    }
+
+    fn gen_ir_return(&mut self, expr: &Ast) -> Option<usize> {
+        let reg_expr = self.gen_expr(expr);
+        let ir = IR::new(IROp::Return, reg_expr, None);
+        self.ir_vec.push(ir);
+        reg_expr
     }
 }
 

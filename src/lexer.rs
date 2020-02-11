@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::from_utf8;
 
 use crate::util::{Annotation, Loc};
@@ -15,6 +16,7 @@ pub enum TokenKind {
     Semicolon,
     Assignment,
     Number(usize),
+    Return,
 }
 
 pub type Token = Annotation<TokenKind>;
@@ -73,6 +75,16 @@ impl LexError {
     }
 }
 
+fn new_token(token_kind: TokenKind, start: usize, end: usize) -> Token {
+    Token::new(token_kind, Loc(start, end))
+}
+
+fn reserve_keywords() -> HashMap<String, TokenKind> {
+    let mut keywords = HashMap::new();
+    keywords.insert("return".to_string(), TokenKind::Return);
+    keywords
+}
+
 /// Struct to hold a input code, reading position, processed tokens.
 pub struct Lexer<'a> {
     /// Input code.
@@ -95,6 +107,7 @@ impl<'a> Lexer<'a> {
 
     /// Read all characters in a input code and push token into `tokens`.
     pub fn lex(&mut self) -> Result<&Vec<Token>, LexError> {
+        let keywords = reserve_keywords();
         while self.pos < self.input.len() {
             match self.input[self.pos] {
                 b'+' => self.lex_plus(),
@@ -104,7 +117,7 @@ impl<'a> Lexer<'a> {
                 b'(' => self.lex_lparen(),
                 b')' => self.lex_rparen(),
                 b'0'..=b'9' => self.lex_number(),
-                b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(),
+                b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(&keywords),
                 b';' => self.lex_semicolon(),
                 b'=' => self.lex_assignment(),
                 b' ' | b'\n' | b'\t' => self.skip_spaces(),
@@ -159,12 +172,15 @@ impl<'a> Lexer<'a> {
         self.pos = end;
     }
 
-    fn lex_identifier(&mut self) {
+    fn lex_identifier(&mut self, keywords: &HashMap<String, TokenKind>) {
         let start = self.pos;
         let end = self.recognize_multiple_char(|b| b.is_ascii_alphanumeric() || b == b'_');
-        let ident = from_utf8(&self.input[start..end]).unwrap();
-        self.tokens
-            .push(token!(Identifier(ident.to_string()), start, end));
+        let identifier = from_utf8(&self.input[start..end]).unwrap();
+        let identifier = identifier.to_string();
+        match keywords.get(&identifier) {
+            Some(token_kind) => self.tokens.push(new_token(token_kind.clone(), start, end)),
+            None => self.tokens.push(token!(Identifier(identifier), start, end)),
+        }
         self.pos = end;
     }
 

@@ -46,6 +46,7 @@ impl Generator {
             IROp::BpOffset => self.gen_bprel(ir),
             IROp::Load => self.gen_load(ir),
             IROp::Store => self.gen_store(ir),
+            IROp::Return => unimplemented!(),
         }
     }
 
