@@ -18,6 +18,7 @@ pub enum IROp {
     Load,
     Store,
     Return,
+    Kill,
 }
 
 /// Inner representation.
@@ -40,7 +41,7 @@ pub struct IRGenerator {
     pub ir_vec: Vec<IR>,
     // HashMap of variable offset from $rbp.
     pub variable_map: HashMap<String, usize>,
-    // HashMap of which register each variable(represented by offset) is stored.
+    // HashMap of in which register each variable(represented by offset) is stored.
     pub variable_reg_map: HashMap<usize, usize>,
     // Used register count in a AST.
     reg_count: usize,
@@ -59,7 +60,7 @@ impl IRGenerator {
     pub fn gen_ir(&mut self, asts: &Vec<Ast>) {
         for ast in asts {
             self.gen_expr(ast);
-            self.reg_count = 0;
+            // self.reg_count = 0;
         }
     }
 
@@ -115,14 +116,12 @@ impl IRGenerator {
         self.ir_vec.push(ir);
 
         let offset = self.variable_map.get(&val_name).unwrap();
-        self.variable_reg_map.insert(*offset, reg_lhs.unwrap());
+        self.variable_reg_map.insert(*offset, reg_rhs.unwrap());
         reg_lhs
     }
 
     fn gen_ir_lval(&mut self, val: &String) -> Option<usize> {
         let offset = self.variable_map.get(val).unwrap();
-        // let ir = IR::new(IROp::BpOffset, Some(*offset), None);
-        // self.ir_vec.push(ir);
         Some(*offset)
     }
 
@@ -131,6 +130,7 @@ impl IRGenerator {
         let var_offset = self.gen_ir_lval(val);
         let ir = IR::new(IROp::Load, Some(self.reg_count), var_offset);
         self.ir_vec.push(ir);
+        // let reg = self.variable_reg_map.get(&var_offset.unwrap());
         Some(self.reg_count)
     }
 
@@ -139,6 +139,11 @@ impl IRGenerator {
         let ir = IR::new(IROp::Return, reg_expr, None);
         self.ir_vec.push(ir);
         reg_expr
+    }
+
+    fn kill(&mut self, reg: Option<usize>) {
+        let ir = IR::new(IROp::Kill, reg, None);
+        self.ir_vec.push(ir);
     }
 }
 
@@ -149,7 +154,7 @@ mod tests {
     use crate::parser::Parser;
     #[test]
     fn test_assignment() {
-        let code = "a = 3; b = 4; c = 2; d = a + b * -c; d;";
+        let code = "a = 3; b = 2; c = a * b; return c;";
         let mut lexer = Lexer::new(code);
         let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new();
@@ -160,18 +165,14 @@ mod tests {
         let ir_vec = vec![
             IR::new(IROp::Imm, Some(1), Some(3)),
             IR::new(IROp::Store, Some(8), Some(1)),
-            IR::new(IROp::Imm, Some(1), Some(4)),
-            IR::new(IROp::Store, Some(16), Some(1)),
-            IR::new(IROp::Imm, Some(1), Some(2)),
-            IR::new(IROp::Store, Some(24), Some(1)),
-            IR::new(IROp::Load, Some(1), Some(8)),
-            IR::new(IROp::Load, Some(2), Some(16)),
-            IR::new(IROp::Load, Some(3), Some(24)),
-            IR::new(IROp::Minus, Some(3), None),
-            IR::new(IROp::Mul, Some(2), Some(3)),
-            IR::new(IROp::Add, Some(1), Some(2)),
-            IR::new(IROp::Store, Some(32), Some(1)),
-            IR::new(IROp::Load, Some(1), Some(32)),
+            IR::new(IROp::Imm, Some(2), Some(2)),
+            IR::new(IROp::Store, Some(16), Some(2)),
+            IR::new(IROp::Load, Some(3), Some(8)),
+            IR::new(IROp::Load, Some(4), Some(16)),
+            IR::new(IROp::Mul, Some(3), Some(4)),
+            IR::new(IROp::Store, Some(24), Some(3)),
+            IR::new(IROp::Load, Some(5), Some(24)),
+            IR::new(IROp::Return, Some(5), None),
         ];
         assert_eq!(ir_generator.ir_vec, ir_vec)
     }

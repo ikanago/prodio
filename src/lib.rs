@@ -6,3 +6,5 @@ pub mod gen_ir;
 pub mod lexer;
 pub mod parser;
 pub mod util;
+
+const REGISTER_COUNT: usize = 7;

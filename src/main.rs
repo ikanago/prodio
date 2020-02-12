@@ -14,7 +14,7 @@ fn main() -> std::io::Result<()> {
         (version: crate_version!())
         (author: crate_authors!())
         (about: crate_description!())
-        (@arg CODE: +required "Raw source code in one line.")
+        (@arg CODE: +required "Input source file.")
         (@arg OUTPUT: -o +takes_value "Specify output file.")
         (@arg dump_token: --("dump-token") "Dump tokens into stderr.")
         (@arg dump_ast: --("dump-ast") "Dump AST into stderr.")
@@ -33,6 +33,7 @@ fn main() -> std::io::Result<()> {
         let stack_offset = parser.stack_offset;
         let mut ir_generator = gen_ir::IRGenerator::new(parser);
         ir_generator.gen_ir(&asts);
+        // ir_generator.reg_alloc();
 
         if matches.is_present("dump_token") {
             dump_info::dump_tokens(&tokens);
