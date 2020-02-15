@@ -6,16 +6,17 @@ use crate::util::{Annotation, Loc};
 /// Data type that represents Token.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenKind {
+    Number(usize),
+    Identifier(String),
+    Int,
     Plus,
     Minus,
     Asterisk,
     Slash,
     LParen,
     RParen,
-    Identifier(String),
-    Semicolon,
     Assignment,
-    Number(usize),
+    Semicolon,
     Return,
 }
 
@@ -81,6 +82,7 @@ fn new_token(token_kind: TokenKind, start: usize, end: usize) -> Token {
 
 fn reserve_keywords() -> HashMap<String, TokenKind> {
     let mut keywords = HashMap::new();
+    keywords.insert("int".to_string(), TokenKind::Int);
     keywords.insert("return".to_string(), TokenKind::Return);
     keywords
 }

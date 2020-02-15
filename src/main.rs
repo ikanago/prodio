@@ -26,25 +26,31 @@ fn main() -> std::io::Result<()> {
         let mut source_file = File::open(source_file_path)?;
         let mut source_code = String::new();
         source_file.read_to_string(&mut source_code)?;
+
+        // Lex
         let mut lexer = Lexer::new(&source_code);
         let tokens = lexer.lex().unwrap();
-        let mut parser = Parser::new();
-        let asts = parser.parse(tokens.to_vec()).unwrap();
-        let stack_offset = parser.stack_offset;
-        let mut ir_generator = gen_ir::IRGenerator::new(parser);
-        ir_generator.gen_ir(&asts);
-        // ir_generator.reg_alloc();
-
         if matches.is_present("dump_token") {
             dump_info::dump_tokens(&tokens);
         }
+
+        // Parse
+        let mut parser = Parser::new();
+        let asts = parser.parse(tokens.to_vec()).unwrap();
         if matches.is_present("dump_ast") {
             dump_info::dump_asts(&asts);
         }
+
+        // IR Generation
+        let stack_offset = parser.stack_offset;
+        let mut ir_generator = gen_ir::IRGenerator::new(parser);
+        ir_generator.gen_ir(&asts);
+        ir_generator.reg_alloc();
         if matches.is_present("dump_ir") {
             dump_info::dump_ir(&ir_generator.ir_vec);
         }
 
+        // Code Generation
         let mut generator = Generator::new();
         generator.code_gen(&ir_generator.ir_vec, stack_offset);
 

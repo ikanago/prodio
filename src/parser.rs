@@ -8,6 +8,11 @@ use crate::util::{Annotation, Loc};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AstKind {
     Num(usize),
+    Variable(String),
+    Decl {
+        lhs: Box<Ast>,
+        rhs: Box<Ast>,
+    },
     UniOp {
         op: UniOpKind,
         node: Box<Ast>,
@@ -21,7 +26,6 @@ pub enum AstKind {
         lhs: Box<Ast>,
         rhs: Box<Ast>,
     },
-    Variable(String),
     Return {
         expr: Box<Ast>,
     },
@@ -32,6 +36,10 @@ pub type Ast = Annotation<AstKind>;
 impl Ast {
     pub fn num(n: usize, loc: Loc) -> Self {
         Self::new(AstKind::Num(n), loc)
+    }
+
+    pub fn variable(var: String, loc: Loc) -> Self {
+        Self::new(AstKind::Variable(var), loc)
     }
 
     pub fn uniop(op: UniOpKind, e: Ast, loc: Loc) -> Self {
@@ -64,10 +72,6 @@ impl Ast {
             loc,
         )
     }
-
-    pub fn variable(var: String, loc: Loc) -> Self {
-        Self::new(AstKind::Variable(var), loc)
-    }
 }
 
 /// Data type of unary operator.
@@ -97,6 +101,21 @@ pub enum ParseError {
     Eof,
 }
 
+fn expect_token<Tokens>(
+    tokens: &mut Peekable<Tokens>,
+    token_kind: TokenKind,
+) -> Result<(), ParseError>
+where
+    Tokens: Iterator<Item = Token>,
+{
+    let token = tokens.next().unwrap();
+    if token.value == token_kind {
+        Ok(())
+    } else {
+        Err(ParseError::UnexpectedToken(token))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Parser {
     pub env: HashMap<String, usize>,
@@ -117,7 +136,7 @@ impl Parser {
         let mut asts = Vec::new();
         loop {
             let ast = self.parse_stmt(&mut tokens)?;
-            Parser::expect_semicolon(&tokens.next().unwrap())?;
+            expect_token(&mut tokens, TokenKind::Semicolon)?;
             asts.push(ast);
             match tokens.peek() {
                 Some(_) => continue,
@@ -128,12 +147,13 @@ impl Parser {
     }
 
     /// BNF:
-    ///     STMT ::= ASSIGN | "return" ASSIGN
+    ///     STMT ::= ASSIGN | DECL_VAR | "return" ASSIGN
     fn parse_stmt<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item = Token>,
     {
         match tokens.peek().map(|token| &token.value) {
+            Some(TokenKind::Int) => self.parse_decl_var(tokens),
             Some(TokenKind::Return) => {
                 tokens.next();
                 let expr = self.parse_assign(tokens)?;
@@ -168,11 +188,35 @@ impl Parser {
         }
     }
 
-    fn expect_semicolon(token: &Token) -> Result<(), ParseError> {
-        match &token.value {
-            TokenKind::Semicolon => Ok(()),
-            _ => Err(ParseError::NoSemicolon),
-        }
+    /// BNF:
+    ///     DECL_VAR ::= TYPE VARIABLE "=" ADD
+    fn parse_decl_var<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
+    where
+        Tokens: Iterator<Item = Token>,
+    {
+        tokens.next();
+        tokens
+            .next()
+            .ok_or(ParseError::Eof)
+            .and_then(|token| match token.value {
+                TokenKind::Identifier(var) => {
+                    self.stack_offset += 8;
+                    self.env.insert(var.clone(), self.stack_offset);
+
+                    let lhs = Ast::new(AstKind::Variable(var.clone()), token.loc);
+                    expect_token(tokens, TokenKind::Assignment)?;
+                    let rhs = self.parse_add(tokens)?;
+                    let loc = lhs.loc.merge(&rhs.loc);
+                    Ok(Ast::new(
+                        AstKind::Decl {
+                            lhs: Box::new(lhs),
+                            rhs: Box::new(rhs),
+                        },
+                        loc,
+                    ))
+                }
+                _ => Err(ParseError::UnexpectedToken(token.clone())),
+            })
     }
 
     /// BNF:
@@ -255,7 +299,7 @@ impl Parser {
     }
 
     /// BNF:
-    ///     NUMBER ::= DIGIT* | VARIABLE
+    ///     TERM ::= DIGIT* | VARIABLE | "(" ASSIGN ")"
     ///     DIGIT  ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
     fn parse_term<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
@@ -266,16 +310,7 @@ impl Parser {
             .ok_or(ParseError::Eof)
             .and_then(|token| match token.value {
                 TokenKind::Number(n) => Ok(Ast::new(AstKind::Num(n), token.loc)),
-                TokenKind::Identifier(var) => {
-                    match self.env.get(var.as_str()) {
-                        Some(_) => (),
-                        None => {
-                            self.stack_offset += 8;
-                            self.env.insert(var.clone(), self.stack_offset);
-                        }
-                    }
-                    Ok(Ast::new(AstKind::Variable(var), token.loc))
-                }
+                TokenKind::Identifier(var) => Ok(Ast::new(AstKind::Variable(var), token.loc)),
                 TokenKind::LParen => {
                     let node = self.parse_add(tokens)?;
                     match tokens.next() {

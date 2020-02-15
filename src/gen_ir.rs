@@ -22,6 +22,8 @@ pub enum IROp {
 }
 
 /// Inner representation.
+/// Each `lhs` and `rhs` specifies a indice of virtual register.
+/// Later, they are allocated to a real register in `reg_alloc.rs`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IR {
     pub op: IROp,
@@ -38,11 +40,10 @@ impl IR {
 /// Entry point to generate IR.
 #[derive(Debug, Clone)]
 pub struct IRGenerator {
+    // Vec to store IRs.
     pub ir_vec: Vec<IR>,
     // HashMap of variable offset from $rbp.
     pub variable_map: HashMap<String, usize>,
-    // HashMap of in which register each variable(represented by offset) is stored.
-    pub variable_reg_map: HashMap<usize, usize>,
     // Used register count in a AST.
     reg_count: usize,
 }
@@ -52,7 +53,6 @@ impl IRGenerator {
         IRGenerator {
             ir_vec: Vec::new(),
             variable_map: parser.env,
-            variable_reg_map: HashMap::new(),
             reg_count: 0,
         }
     }
@@ -60,7 +60,6 @@ impl IRGenerator {
     pub fn gen_ir(&mut self, asts: &Vec<Ast>) {
         for ast in asts {
             self.gen_expr(ast);
-            // self.reg_count = 0;
         }
     }
 
@@ -68,10 +67,11 @@ impl IRGenerator {
     fn gen_expr(&mut self, ast: &Ast) -> Option<usize> {
         match &ast.value {
             Num(n) => self.gen_ir_immidiate(*n),
+            Variable(var) => self.gen_ir_variable(var),
+            Decl { lhs, rhs } => self.gen_ir_decl_var(lhs, rhs),
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
             Assignment { lhs, rhs } => self.gen_ir_assignment(lhs, rhs),
-            Variable(val) => self.gen_ir_variable(val),
             Return { expr } => self.gen_ir_return(expr),
         }
     }
@@ -81,6 +81,34 @@ impl IRGenerator {
         let ir = IR::new(IROp::Imm, Some(self.reg_count), Some(n));
         self.ir_vec.push(ir);
         Some(self.reg_count)
+    }
+
+    fn gen_ir_lval(&mut self, val: &String) -> Option<usize> {
+        let var_offset = self.variable_map.get(val).unwrap();
+        self.reg_count += 1;
+        let reg_dst = self.reg_count;
+        let ir = IR::new(IROp::BpOffset, Some(reg_dst), Some(*var_offset));
+        self.ir_vec.push(ir);
+        Some(reg_dst)
+    }
+
+    fn gen_ir_variable(&mut self, var: &String) -> Option<usize> {
+        let reg = self.gen_ir_lval(var);
+        let ir = IR::new(IROp::Load, reg, reg);
+        self.ir_vec.push(ir);
+        reg
+    }
+
+    fn gen_ir_decl_var(&mut self, lhs: &Ast, rhs: &Ast) -> Option<usize> {
+        let val_name = ident_val!(&lhs.value);
+        let reg_lhs = self.gen_ir_lval(&val_name);
+        let reg_rhs = self.gen_expr(rhs);
+        let ir = IR::new(IROp::Store, reg_lhs, reg_rhs);
+        self.ir_vec.push(ir);
+
+        self.kill(reg_lhs);
+        self.kill(reg_rhs);
+        None
     }
 
     fn gen_ir_binary_operator(&mut self, op: BinOpKind, lhs: &Ast, rhs: &Ast) -> Option<usize> {
@@ -94,6 +122,7 @@ impl IRGenerator {
             BinOpKind::Div => IR::new(IROp::Div, reg_lhs, reg_rhs),
         };
         self.ir_vec.push(ir);
+        self.kill(reg_rhs);
         reg_lhs
     }
 
@@ -115,23 +144,7 @@ impl IRGenerator {
         let ir = IR::new(IROp::Store, reg_lhs, reg_rhs);
         self.ir_vec.push(ir);
 
-        let offset = self.variable_map.get(&val_name).unwrap();
-        self.variable_reg_map.insert(*offset, reg_rhs.unwrap());
         reg_lhs
-    }
-
-    fn gen_ir_lval(&mut self, val: &String) -> Option<usize> {
-        let offset = self.variable_map.get(val).unwrap();
-        Some(*offset)
-    }
-
-    fn gen_ir_variable(&mut self, val: &String) -> Option<usize> {
-        self.reg_count += 1;
-        let var_offset = self.gen_ir_lval(val);
-        let ir = IR::new(IROp::Load, Some(self.reg_count), var_offset);
-        self.ir_vec.push(ir);
-        // let reg = self.variable_reg_map.get(&var_offset.unwrap());
-        Some(self.reg_count)
     }
 
     fn gen_ir_return(&mut self, expr: &Ast) -> Option<usize> {

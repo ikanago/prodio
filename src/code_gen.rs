@@ -37,7 +37,7 @@ impl Generator {
             IROp::Load => self.gen_load(ir),
             IROp::Store => self.gen_store(ir),
             IROp::Return => self.gen_return(ir),
-            _ => unimplemented!(),
+            IROp::Kill => (),
         }
     }
 
@@ -93,28 +93,31 @@ impl Generator {
         }
     }
 
+    /// Generate code to store an address into the register.
     fn gen_bprel(&mut self, ir: &IR) {
-        let offset = ir.lhs.expect("Offset from $rbp is not specified.");
-        self.code.push(format!("  lea rax, [rbp-{}]", offset));
-        self.code.push("  push rax".to_string());
+        let offset = ir.rhs.expect("Offset from $rbp is not specified.");
+        let reg_count = ir.lhs.unwrap();
+        self.code
+            .push(format!("  lea {}, [rbp-{}]", REGISTERS[reg_count], offset));
     }
 
+    /// Make sure the destination register has an address.
     fn gen_load(&mut self, ir: &IR) {
-        let reg_count = ir.lhs.unwrap();
+        let src_reg_count = ir.lhs.unwrap();
+        let dst_reg_count = ir.rhs.unwrap();
         self.code.push(format!(
-            "  mov {}, [rbp-{}]",
-            REGISTERS[reg_count],
-            ir.rhs.unwrap()
+            "  mov {}, [{}]",
+            REGISTERS[src_reg_count], REGISTERS[dst_reg_count]
         ));
     }
 
-    /// Generate code for storing value into variable.
+    /// Make sure the source register has an address.
     fn gen_store(&mut self, ir: &IR) {
-        let reg_count = ir.rhs.unwrap();
+        let dst_reg_count = ir.lhs.unwrap();
+        let src_reg_count = ir.rhs.unwrap();
         self.code.push(format!(
-            "  mov [rbp-{}], {}",
-            ir.lhs.unwrap(),
-            REGISTERS[reg_count]
+            "  mov [{}], {}",
+            REGISTERS[dst_reg_count], REGISTERS[src_reg_count]
         ));
     }
 
