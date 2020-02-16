@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::from_utf8;
 
 use crate::util::{Annotation, Loc};
@@ -5,16 +6,18 @@ use crate::util::{Annotation, Loc};
 /// Data type that represents Token.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenKind {
+    Number(usize),
+    Identifier(String),
+    Int,
     Plus,
     Minus,
     Asterisk,
     Slash,
     LParen,
     RParen,
-    Identifier(String),
-    Semicolon,
     Assignment,
-    Number(usize),
+    Semicolon,
+    Return,
 }
 
 pub type Token = Annotation<TokenKind>;
@@ -73,6 +76,17 @@ impl LexError {
     }
 }
 
+fn new_token(token_kind: TokenKind, start: usize, end: usize) -> Token {
+    Token::new(token_kind, Loc(start, end))
+}
+
+fn reserve_keywords() -> HashMap<String, TokenKind> {
+    let mut keywords = HashMap::new();
+    keywords.insert("int".to_string(), TokenKind::Int);
+    keywords.insert("return".to_string(), TokenKind::Return);
+    keywords
+}
+
 /// Struct to hold a input code, reading position, processed tokens.
 pub struct Lexer<'a> {
     /// Input code.
@@ -95,6 +109,7 @@ impl<'a> Lexer<'a> {
 
     /// Read all characters in a input code and push token into `tokens`.
     pub fn lex(&mut self) -> Result<&Vec<Token>, LexError> {
+        let keywords = reserve_keywords();
         while self.pos < self.input.len() {
             match self.input[self.pos] {
                 b'+' => self.lex_plus(),
@@ -104,7 +119,7 @@ impl<'a> Lexer<'a> {
                 b'(' => self.lex_lparen(),
                 b')' => self.lex_rparen(),
                 b'0'..=b'9' => self.lex_number(),
-                b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(),
+                b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(&keywords),
                 b';' => self.lex_semicolon(),
                 b'=' => self.lex_assignment(),
                 b' ' | b'\n' | b'\t' => self.skip_spaces(),
@@ -159,12 +174,15 @@ impl<'a> Lexer<'a> {
         self.pos = end;
     }
 
-    fn lex_identifier(&mut self) {
+    fn lex_identifier(&mut self, keywords: &HashMap<String, TokenKind>) {
         let start = self.pos;
         let end = self.recognize_multiple_char(|b| b.is_ascii_alphanumeric() || b == b'_');
-        let ident = from_utf8(&self.input[start..end]).unwrap();
-        self.tokens
-            .push(token!(Identifier(ident.to_string()), start, end));
+        let identifier = from_utf8(&self.input[start..end]).unwrap();
+        let identifier = identifier.to_string();
+        match keywords.get(&identifier) {
+            Some(token_kind) => self.tokens.push(new_token(token_kind.clone(), start, end)),
+            None => self.tokens.push(token!(Identifier(identifier), start, end)),
+        }
         self.pos = end;
     }
 
@@ -214,41 +232,32 @@ mod tests {
             ]),
         );
 
-        let mut lexer = Lexer::new("(5 + 2) * 31 - -10");
+        let mut lexer = Lexer::new("int a = 3; int b = 2; int c = a * b; return c;");
         let tokens = lexer.lex();
+        println!("{:?}", tokens);
         assert_eq!(
             tokens,
             Ok(&vec![
-                token!(LParen, 0, 1),
-                token!(Number(5), 1, 2),
-                token!(Plus, 3, 4),
-                token!(Number(2), 5, 6),
-                token!(RParen, 6, 7),
-                token!(Asterisk, 8, 9),
-                token!(Number(31), 10, 12),
-                token!(Minus, 13, 14),
-                token!(Minus, 15, 16),
-                token!(Number(10), 16, 18),
-            ]),
-        );
-
-        let mut lexer = Lexer::new("abc = 3; def = 5; abc + def;");
-        let tokens = lexer.lex();
-        assert_eq!(
-            tokens,
-            Ok(&vec![
-                token!(Identifier("abc".to_string()), 0, 3),
-                token!(Assignment, 4, 5),
-                token!(Number(3), 6, 7),
-                token!(Semicolon, 7, 8),
-                token!(Identifier("def".to_string()), 9, 12),
-                token!(Assignment, 13, 14),
-                token!(Number(5), 15, 16),
-                token!(Semicolon, 16, 17),
-                token!(Identifier("abc".to_string()), 18, 21),
-                token!(Plus, 22, 23),
-                token!(Identifier("def".to_string()), 24, 27),
-                token!(Semicolon, 27, 28),
+                token!(Int, 0, 3),
+                token!(Identifier("a".to_string()), 4, 5),
+                token!(Assignment, 6, 7),
+                token!(Number(3), 8, 9),
+                token!(Semicolon, 9, 10),
+                token!(Int, 11, 14),
+                token!(Identifier("b".to_string()), 15, 16),
+                token!(Assignment, 17, 18),
+                token!(Number(2), 19, 20),
+                token!(Semicolon, 20, 21),
+                token!(Int, 22, 25),
+                token!(Identifier("c".to_string()), 26, 27),
+                token!(Assignment, 28, 29),
+                token!(Identifier("a".to_string()), 30, 31),
+                token!(Asterisk, 32, 33),
+                token!(Identifier("b".to_string()), 34, 35),
+                token!(Semicolon, 35, 36),
+                token!(Return, 37, 43),
+                token!(Identifier("c".to_string()), 44, 45),
+                token!(Semicolon, 45, 46),
             ]),
         );
     }
