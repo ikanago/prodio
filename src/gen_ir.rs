@@ -167,7 +167,7 @@ mod tests {
     use crate::parser::Parser;
     #[test]
     fn test_assignment() {
-        let code = "a = 3; b = 2; c = a * b; return c;";
+        let code = "int a = 3; int b = 2; int c = a * b; return c;";
         let mut lexer = Lexer::new(code);
         let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new();
@@ -176,16 +176,29 @@ mod tests {
         ir_generator.gen_ir(&ast);
 
         let ir_vec = vec![
-            IR::new(IROp::Imm, Some(1), Some(3)),
-            IR::new(IROp::Store, Some(8), Some(1)),
-            IR::new(IROp::Imm, Some(2), Some(2)),
-            IR::new(IROp::Store, Some(16), Some(2)),
-            IR::new(IROp::Load, Some(3), Some(8)),
-            IR::new(IROp::Load, Some(4), Some(16)),
-            IR::new(IROp::Mul, Some(3), Some(4)),
-            IR::new(IROp::Store, Some(24), Some(3)),
-            IR::new(IROp::Load, Some(5), Some(24)),
-            IR::new(IROp::Return, Some(5), None),
+            IR::new(IROp::BpOffset, Some(1), Some(8)),
+            IR::new(IROp::Imm, Some(2), Some(3)),
+            IR::new(IROp::Store, Some(1), Some(2)),
+            IR::new(IROp::Kill, Some(1), None),
+            IR::new(IROp::Kill, Some(2), None),
+            IR::new(IROp::BpOffset, Some(3), Some(16)),
+            IR::new(IROp::Imm, Some(4), Some(2)),
+            IR::new(IROp::Store, Some(3), Some(4)),
+            IR::new(IROp::Kill, Some(3), None),
+            IR::new(IROp::Kill, Some(4), None),
+            IR::new(IROp::BpOffset, Some(5), Some(24)),
+            IR::new(IROp::BpOffset, Some(6), Some(8)),
+            IR::new(IROp::Load, Some(6), Some(6)),
+            IR::new(IROp::BpOffset, Some(7), Some(16)),
+            IR::new(IROp::Load, Some(7), Some(7)),
+            IR::new(IROp::Mul, Some(6), Some(7)),
+            IR::new(IROp::Kill, Some(7), None),
+            IR::new(IROp::Store, Some(5), Some(6)),
+            IR::new(IROp::Kill, Some(5), None),
+            IR::new(IROp::Kill, Some(6), None),
+            IR::new(IROp::BpOffset, Some(8), Some(24)),
+            IR::new(IROp::Load, Some(8), Some(8)),
+            IR::new(IROp::Return, Some(8), None),
         ];
         assert_eq!(ir_generator.ir_vec, ir_vec)
     }

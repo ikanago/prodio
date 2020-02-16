@@ -232,28 +232,32 @@ mod tests {
             ]),
         );
 
-        let mut lexer = Lexer::new("a = 3; b = 2; c = a * b; return c;");
+        let mut lexer = Lexer::new("int a = 3; int b = 2; int c = a * b; return c;");
         let tokens = lexer.lex();
+        println!("{:?}", tokens);
         assert_eq!(
             tokens,
             Ok(&vec![
-                token!(Identifier("a".to_string()), 0, 1),
-                token!(Assignment, 2, 3),
-                token!(Number(3), 4, 5),
-                token!(Semicolon, 5, 6),
-                token!(Identifier("b".to_string()), 7, 8),
-                token!(Assignment, 9, 10),
-                token!(Number(2), 11, 12),
-                token!(Semicolon, 12, 13),
-                token!(Identifier("c".to_string()), 14, 15),
-                token!(Assignment, 16, 17),
-                token!(Identifier("a".to_string()), 18, 19),
-                token!(Asterisk, 20, 21),
-                token!(Identifier("b".to_string()), 22, 23),
-                token!(Semicolon, 23, 24),
-                token!(Return, 25, 31),
-                token!(Identifier("c".to_string()), 32, 33),
-                token!(Semicolon, 33, 34),
+                token!(Int, 0, 3),
+                token!(Identifier("a".to_string()), 4, 5),
+                token!(Assignment, 6, 7),
+                token!(Number(3), 8, 9),
+                token!(Semicolon, 9, 10),
+                token!(Int, 11, 14),
+                token!(Identifier("b".to_string()), 15, 16),
+                token!(Assignment, 17, 18),
+                token!(Number(2), 19, 20),
+                token!(Semicolon, 20, 21),
+                token!(Int, 22, 25),
+                token!(Identifier("c".to_string()), 26, 27),
+                token!(Assignment, 28, 29),
+                token!(Identifier("a".to_string()), 30, 31),
+                token!(Asterisk, 32, 33),
+                token!(Identifier("b".to_string()), 34, 35),
+                token!(Semicolon, 35, 36),
+                token!(Return, 37, 43),
+                token!(Identifier("c".to_string()), 44, 45),
+                token!(Semicolon, 45, 46),
             ]),
         );
     }

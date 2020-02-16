@@ -57,3 +57,48 @@ impl IRGenerator {
         panic!("No availabale register: {}", ir_reg);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::gen_ir::*;
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+    #[test]
+    fn test_assignment() {
+        let code = "int a = 3; int b = 2; int c = a * b; return c;";
+        let mut lexer = Lexer::new(code);
+        let tokens = lexer.lex().unwrap();
+        let mut parser = Parser::new();
+        let ast = parser.parse(tokens.to_vec()).unwrap();
+        let mut ir_generator = IRGenerator::new(parser);
+        ir_generator.gen_ir(&ast);
+        ir_generator.reg_alloc();
+
+        let ir_vec = vec![
+            IR::new(IROp::BpOffset, Some(0), Some(8)),
+        IR::new(IROp::Imm, Some(1), Some(3)),
+        IR::new(IROp::Store, Some(0), Some(1)),
+        IR::new(IROp::Kill, Some(0), None),
+        IR::new(IROp::Kill, Some(1), None),
+        IR::new(IROp::BpOffset, Some(0), Some(16)),
+        IR::new(IROp::Imm, Some(2), Some(2)),
+        IR::new(IROp::Store, Some(0), Some(2)),
+        IR::new(IROp::Kill, Some(0), None),
+        IR::new(IROp::Kill, Some(2), None),
+        IR::new(IROp::BpOffset, Some(1), Some(24)),
+        IR::new(IROp::BpOffset, Some(2), Some(8)),
+        IR::new(IROp::Load, Some(2), Some(2)),
+        IR::new(IROp::BpOffset, Some(3), Some(16)),
+        IR::new(IROp::Load, Some(3), Some(3)),
+        IR::new(IROp::Mul, Some(2), Some(3)),
+        IR::new(IROp::Kill, Some(3), None),
+        IR::new(IROp::Store, Some(1), Some(2)),
+        IR::new(IROp::Kill, Some(1), None),
+        IR::new(IROp::Kill, Some(2), None),
+        IR::new(IROp::BpOffset, Some(0), Some(24)),
+        IR::new(IROp::Load, Some(0), Some(0)),
+        IR::new(IROp::Return, Some(0), None),
+                ];
+        assert_eq!(ir_generator.ir_vec, ir_vec)
+    }
+}

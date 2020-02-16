@@ -18,7 +18,8 @@ fn main() -> std::io::Result<()> {
         (@arg OUTPUT: -o +takes_value "Specify output file.")
         (@arg dump_token: --("dump-token") "Dump tokens into stderr.")
         (@arg dump_ast: --("dump-ast") "Dump AST into stderr.")
-        (@arg dump_ir: --("dump-ir") "Dump inner representation into stderr.")
+        (@arg dump_ir_v: --("dump-ir-v") "Dump inner representation (using virtual register) into stderr.")
+        (@arg dump_ir_r: --("dump-ir-r") "Dump inner representation (using real register) into stderr.")
     )
     .get_matches();
 
@@ -45,8 +46,12 @@ fn main() -> std::io::Result<()> {
         let stack_offset = parser.stack_offset;
         let mut ir_generator = gen_ir::IRGenerator::new(parser);
         ir_generator.gen_ir(&asts);
+        if matches.is_present("dump_ir_v") {
+            dump_info::dump_ir(&ir_generator.ir_vec);
+        }
+
         ir_generator.reg_alloc();
-        if matches.is_present("dump_ir") {
+        if matches.is_present("dump_ir_r") {
             dump_info::dump_ir(&ir_generator.ir_vec);
         }
 
