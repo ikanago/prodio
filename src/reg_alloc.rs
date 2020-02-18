@@ -13,20 +13,18 @@ impl IRGenerator {
 
         for ir in &mut self.ir_vec {
             match ir.op {
-                IROp::Imm | IROp::BpOffset | IROp::Cond | IROp::Return | IROp::Kill => {
+                IROp::Imm | IROp::BpOffset | IROp::Cond | IROp::Return => {
                     ir.lhs = IRGenerator::alloc(ir.lhs, &mut is_reg_used, &mut reg_map)
                 }
                 IROp::Add | IROp::Sub | IROp::Mul | IROp::Div | IROp::Store | IROp::Load => {
                     ir.lhs = IRGenerator::alloc(ir.lhs, &mut is_reg_used, &mut reg_map);
                     ir.rhs = IRGenerator::alloc(ir.rhs, &mut is_reg_used, &mut reg_map);
                 }
+                IROp::Kill => {
+                    ir.lhs = IRGenerator::alloc(ir.lhs, &mut is_reg_used, &mut reg_map);
+                    is_reg_used[ir.lhs.unwrap()] = false;
+                }
                 _ => (),
-            }
-
-            if ir.op == IROp::Kill {
-                let ir_reg = ir.lhs;
-                let real_reg = IRGenerator::alloc(ir_reg, &mut is_reg_used, &mut reg_map);
-                is_reg_used[real_reg.unwrap()] = false;
             }
         }
     }
@@ -76,29 +74,29 @@ mod tests {
 
         let ir_vec = vec![
             IR::new(IROp::BpOffset, Some(0), Some(8)),
-        IR::new(IROp::Imm, Some(1), Some(3)),
-        IR::new(IROp::Store, Some(0), Some(1)),
-        IR::new(IROp::Kill, Some(0), None),
-        IR::new(IROp::Kill, Some(1), None),
-        IR::new(IROp::BpOffset, Some(0), Some(16)),
-        IR::new(IROp::Imm, Some(2), Some(2)),
-        IR::new(IROp::Store, Some(0), Some(2)),
-        IR::new(IROp::Kill, Some(0), None),
-        IR::new(IROp::Kill, Some(2), None),
-        IR::new(IROp::BpOffset, Some(1), Some(24)),
-        IR::new(IROp::BpOffset, Some(2), Some(8)),
-        IR::new(IROp::Load, Some(2), Some(2)),
-        IR::new(IROp::BpOffset, Some(3), Some(16)),
-        IR::new(IROp::Load, Some(3), Some(3)),
-        IR::new(IROp::Mul, Some(2), Some(3)),
-        IR::new(IROp::Kill, Some(3), None),
-        IR::new(IROp::Store, Some(1), Some(2)),
-        IR::new(IROp::Kill, Some(1), None),
-        IR::new(IROp::Kill, Some(2), None),
-        IR::new(IROp::BpOffset, Some(0), Some(24)),
-        IR::new(IROp::Load, Some(0), Some(0)),
-        IR::new(IROp::Return, Some(0), None),
-                ];
+            IR::new(IROp::Imm, Some(1), Some(3)),
+            IR::new(IROp::Store, Some(0), Some(1)),
+            IR::new(IROp::Kill, Some(0), None),
+            IR::new(IROp::Kill, Some(1), None),
+            IR::new(IROp::BpOffset, Some(0), Some(16)),
+            IR::new(IROp::Imm, Some(2), Some(2)),
+            IR::new(IROp::Store, Some(0), Some(2)),
+            IR::new(IROp::Kill, Some(0), None),
+            IR::new(IROp::Kill, Some(2), None),
+            IR::new(IROp::BpOffset, Some(1), Some(24)),
+            IR::new(IROp::BpOffset, Some(2), Some(8)),
+            IR::new(IROp::Load, Some(2), Some(2)),
+            IR::new(IROp::BpOffset, Some(3), Some(16)),
+            IR::new(IROp::Load, Some(3), Some(3)),
+            IR::new(IROp::Mul, Some(2), Some(3)),
+            IR::new(IROp::Kill, Some(3), None),
+            IR::new(IROp::Store, Some(1), Some(2)),
+            IR::new(IROp::Kill, Some(1), None),
+            IR::new(IROp::Kill, Some(2), None),
+            IR::new(IROp::BpOffset, Some(0), Some(24)),
+            IR::new(IROp::Load, Some(0), Some(0)),
+            IR::new(IROp::Return, Some(0), None),
+        ];
         assert_eq!(ir_generator.ir_vec, ir_vec)
     }
 }

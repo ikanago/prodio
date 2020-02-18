@@ -169,6 +169,7 @@ impl IRGenerator {
         let reg_expr = self.gen_expr(expr);
         let ir = IR::new(IROp::Return, reg_expr, None);
         self.ir_vec.push(ir);
+        self.kill(reg_expr);
         reg_expr
     }
 
