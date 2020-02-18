@@ -36,6 +36,8 @@ impl Generator {
             IROp::BpOffset => self.gen_bprel(ir),
             IROp::Load => self.gen_load(ir),
             IROp::Store => self.gen_store(ir),
+            IROp::Cond => self.gen_cond(ir),
+            IROp::Label => self.gen_label(ir),
             IROp::Return => self.gen_return(ir),
             IROp::Kill => (),
         }
@@ -119,6 +121,18 @@ impl Generator {
             "  mov [{}], {}",
             REGISTERS[dst_reg_count], REGISTERS[src_reg_count]
         ));
+    }
+
+    fn gen_cond(&mut self, ir: &IR) {
+        let reg_flag = ir.lhs.unwrap();
+        let label_number = ir.rhs.unwrap();
+        self.code.push(format!("  cmp {}, 0", REGISTERS[reg_flag]));
+        self.code.push(format!("  je .Lelse{}", label_number));
+    }
+
+    fn gen_label(&mut self, ir: &IR) {
+        let label_number = ir.lhs.unwrap();
+        self.code.push(format!(".Lelse{}:", label_number));
     }
 
     fn gen_return(&mut self, ir: &IR) {

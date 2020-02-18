@@ -17,6 +17,8 @@ pub enum IROp {
     BpOffset, // Load variable offset from $rbp.
     Load,
     Store,
+    Cond,
+    Label,
     Return,
     Kill,
 }
@@ -46,6 +48,7 @@ pub struct IRGenerator {
     pub variable_map: HashMap<String, usize>,
     // Used register count in a AST.
     reg_count: usize,
+    pub label_number: usize,
 }
 
 impl IRGenerator {
@@ -54,6 +57,7 @@ impl IRGenerator {
             ir_vec: Vec::new(),
             variable_map: parser.env,
             reg_count: 0,
+            label_number: 0,
         }
     }
 
@@ -71,6 +75,7 @@ impl IRGenerator {
             Decl { lhs, rhs } => self.gen_ir_decl_var(lhs, rhs),
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
+            If { cond, then, els } => self.gen_ir_if(cond, then, els),
             Assignment { lhs, rhs } => self.gen_ir_assignment(lhs, rhs),
             Return { expr } => self.gen_ir_return(expr),
         }
@@ -135,6 +140,19 @@ impl IRGenerator {
         };
         self.ir_vec.push(ir);
         node
+    }
+
+    fn gen_ir_if(&mut self, cond: &Ast, then: &Ast, _els: &Option<Box<Ast>>) -> Option<usize> {
+        self.label_number += 1;
+        let reg_flag = self.gen_expr(cond);
+        let ir_condition = IR::new(IROp::Cond, reg_flag, Some(self.label_number));
+        self.ir_vec.push(ir_condition);
+        self.kill(reg_flag);
+
+        self.gen_expr(then);
+        let ir_label = IR::new(IROp::Label, Some(self.label_number), None);
+        self.ir_vec.push(ir_label);
+        None
     }
 
     fn gen_ir_assignment(&mut self, lhs: &Ast, rhs: &Ast) -> Option<usize> {

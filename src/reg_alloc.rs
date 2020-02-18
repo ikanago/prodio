@@ -13,7 +13,7 @@ impl IRGenerator {
 
         for ir in &mut self.ir_vec {
             match ir.op {
-                IROp::Imm | IROp::BpOffset | IROp::Return | IROp::Kill => {
+                IROp::Imm | IROp::BpOffset | IROp::Cond | IROp::Return | IROp::Kill => {
                     ir.lhs = IRGenerator::alloc(ir.lhs, &mut is_reg_used, &mut reg_map)
                 }
                 IROp::Add | IROp::Sub | IROp::Mul | IROp::Div | IROp::Store | IROp::Load => {

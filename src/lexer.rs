@@ -15,6 +15,9 @@ pub enum TokenKind {
     Slash,
     LParen,
     RParen,
+    // LBrace,
+    // RBrace,
+    If,
     Assignment,
     Semicolon,
     Return,
@@ -83,6 +86,7 @@ fn new_token(token_kind: TokenKind, start: usize, end: usize) -> Token {
 fn reserve_keywords() -> HashMap<String, TokenKind> {
     let mut keywords = HashMap::new();
     keywords.insert("int".to_string(), TokenKind::Int);
+    keywords.insert("if".to_string(), TokenKind::If);
     keywords.insert("return".to_string(), TokenKind::Return);
     keywords
 }
@@ -118,6 +122,8 @@ impl<'a> Lexer<'a> {
                 b'/' => self.lex_slash(),
                 b'(' => self.lex_lparen(),
                 b')' => self.lex_rparen(),
+                // b'{' => self.lex_lbrace(),
+                // b'}' => self.lex_rbrace(),
                 b'0'..=b'9' => self.lex_number(),
                 b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(&keywords),
                 b';' => self.lex_semicolon(),
@@ -164,6 +170,16 @@ impl<'a> Lexer<'a> {
         self.tokens.push(token!(RParen, self.pos, self.pos + 1));
         self.pos += 1;
     }
+
+    // fn lex_lbrace(&mut self) {
+    //     self.tokens.push(token!(LBrace, self.pos, self.pos + 1));
+    //     self.pos += 1;
+    // }
+
+    // fn lex_rbrace(&mut self) {
+    //     self.tokens.push(token!(RBrace, self.pos, self.pos + 1));
+    //     self.pos += 1;
+    // }
 
     fn lex_number(&mut self) {
         let start = self.pos;

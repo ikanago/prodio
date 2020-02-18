@@ -50,6 +50,7 @@ fn main() -> std::io::Result<()> {
             dump_info::dump_ir(&ir_generator.ir_vec);
         }
 
+        // Register allocation
         ir_generator.reg_alloc();
         if matches.is_present("dump_ir_r") {
             dump_info::dump_ir(&ir_generator.ir_vec);

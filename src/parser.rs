@@ -22,6 +22,11 @@ pub enum AstKind {
         lhs: Box<Ast>,
         rhs: Box<Ast>,
     },
+    If {
+        cond: Box<Ast>,
+        then: Box<Ast>,
+        els: Option<Box<Ast>>,
+    },
     Assignment {
         lhs: Box<Ast>,
         rhs: Box<Ast>,
@@ -154,6 +159,22 @@ impl Parser {
     {
         match tokens.peek().map(|token| &token.value) {
             Some(TokenKind::Int) => self.parse_decl_var(tokens),
+            Some(TokenKind::If) => {
+                tokens.next();
+                expect_token(tokens, TokenKind::LParen)?;
+                let cond = self.parse_assign(tokens)?;
+                expect_token(tokens, TokenKind::RParen)?;
+                let then = self.parse_stmt(tokens)?;
+                let loc = cond.loc.merge(&then.loc);
+                Ok(Ast::new(
+                    AstKind::If {
+                        cond: Box::new(cond),
+                        then: Box::new(then),
+                        els: None,
+                    },
+                    loc.clone(),
+                ))
+            }
             Some(TokenKind::Return) => {
                 tokens.next();
                 let expr = self.parse_assign(tokens)?;
