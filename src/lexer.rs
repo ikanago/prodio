@@ -25,40 +25,6 @@ pub enum TokenKind {
 
 pub type Token = Annotation<TokenKind>;
 
-impl Token {
-    pub fn plus(loc: Loc) -> Self {
-        Self::new(TokenKind::Plus, loc)
-    }
-
-    pub fn minus(loc: Loc) -> Self {
-        Self::new(TokenKind::Minus, loc)
-    }
-
-    pub fn asterisk(loc: Loc) -> Self {
-        Self::new(TokenKind::Asterisk, loc)
-    }
-
-    pub fn slash(loc: Loc) -> Self {
-        Self::new(TokenKind::Slash, loc)
-    }
-
-    pub fn lparen(loc: Loc) -> Self {
-        Self::new(TokenKind::LParen, loc)
-    }
-
-    pub fn rparen(loc: Loc) -> Self {
-        Self::new(TokenKind::RParen, loc)
-    }
-
-    pub fn identifier(ident: String, loc: Loc) -> Self {
-        Self::new(TokenKind::Identifier(ident), loc)
-    }
-
-    pub fn number(n: usize, loc: Loc) -> Self {
-        Self::new(TokenKind::Number(n), loc)
-    }
-}
-
 /// Data type that represents lexical error.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LexErrorKind {

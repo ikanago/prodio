@@ -218,6 +218,7 @@ mod tests {
             IR::new(IROp::BpOffset, Some(8), Some(24)),
             IR::new(IROp::Load, Some(8), Some(8)),
             IR::new(IROp::Return, Some(8), None),
+            IR::new(IROp::Kill, Some(8), None),
         ];
         assert_eq!(ir_generator.ir_vec, ir_vec)
     }

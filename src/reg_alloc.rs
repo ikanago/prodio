@@ -6,7 +6,7 @@ use crate::REGISTER_COUNT;
 impl IRGenerator {
     pub fn reg_alloc(&mut self) {
         // Remember whether each real register is used.
-        let mut is_reg_used: [bool; REGISTER_COUNT] = [false; REGISTER_COUNT];
+        let mut is_reg_used = [false; REGISTER_COUNT];
         // Map a virtual register onto a real register.
         // key: virtual register, value: real register
         let mut reg_map: HashMap<usize, usize> = HashMap::new();
@@ -79,23 +79,24 @@ mod tests {
             IR::new(IROp::Kill, Some(0), None),
             IR::new(IROp::Kill, Some(1), None),
             IR::new(IROp::BpOffset, Some(0), Some(16)),
-            IR::new(IROp::Imm, Some(2), Some(2)),
-            IR::new(IROp::Store, Some(0), Some(2)),
+            IR::new(IROp::Imm, Some(1), Some(2)),
+            IR::new(IROp::Store, Some(0), Some(1)),
             IR::new(IROp::Kill, Some(0), None),
-            IR::new(IROp::Kill, Some(2), None),
-            IR::new(IROp::BpOffset, Some(1), Some(24)),
-            IR::new(IROp::BpOffset, Some(2), Some(8)),
-            IR::new(IROp::Load, Some(2), Some(2)),
-            IR::new(IROp::BpOffset, Some(3), Some(16)),
-            IR::new(IROp::Load, Some(3), Some(3)),
-            IR::new(IROp::Mul, Some(2), Some(3)),
-            IR::new(IROp::Kill, Some(3), None),
-            IR::new(IROp::Store, Some(1), Some(2)),
             IR::new(IROp::Kill, Some(1), None),
+            IR::new(IROp::BpOffset, Some(0), Some(24)),
+            IR::new(IROp::BpOffset, Some(1), Some(8)),
+            IR::new(IROp::Load, Some(1), Some(1)),
+            IR::new(IROp::BpOffset, Some(2), Some(16)),
+            IR::new(IROp::Load, Some(2), Some(2)),
+            IR::new(IROp::Mul, Some(1), Some(2)),
             IR::new(IROp::Kill, Some(2), None),
+            IR::new(IROp::Store, Some(0), Some(1)),
+            IR::new(IROp::Kill, Some(0), None),
+            IR::new(IROp::Kill, Some(1), None),
             IR::new(IROp::BpOffset, Some(0), Some(24)),
             IR::new(IROp::Load, Some(0), Some(0)),
             IR::new(IROp::Return, Some(0), None),
+            IR::new(IROp::Kill, Some(0), None),
         ];
         assert_eq!(ir_generator.ir_vec, ir_vec)
     }
