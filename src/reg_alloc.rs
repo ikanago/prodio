@@ -66,9 +66,9 @@ mod tests {
         let code = "int a = 3; int b = 2; int c = a * b; return c;";
         let mut lexer = Lexer::new(code);
         let tokens = lexer.lex().unwrap();
-        let mut parser = Parser::new();
-        let ast = parser.parse(tokens.to_vec()).unwrap();
-        let mut ir_generator = IRGenerator::new(parser);
+        let mut parser = Parser::new(&tokens);
+        let ast = parser.parse().unwrap();
+        let mut ir_generator = IRGenerator::new();
         ir_generator.gen_ir(&ast);
         ir_generator.reg_alloc();
 

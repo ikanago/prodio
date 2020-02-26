@@ -36,15 +36,14 @@ fn main() -> std::io::Result<()> {
         }
 
         // Parse
-        let mut parser = Parser::new();
-        let asts = parser.parse(tokens.to_vec()).unwrap();
+        let mut parser = Parser::new(&tokens);
+        let asts = parser.parse().unwrap();
         if matches.is_present("dump_ast") {
             dump_info::dump_asts(&asts);
         }
 
         // IR Generation
-        let stack_offset = parser.stack_offset;
-        let mut ir_generator = gen_ir::IRGenerator::new(parser);
+        let mut ir_generator = gen_ir::IRGenerator::new();
         ir_generator.gen_ir(&asts);
         if matches.is_present("dump_ir_v") {
             dump_info::dump_ir(&ir_generator.ir_vec);
@@ -55,6 +54,7 @@ fn main() -> std::io::Result<()> {
         if matches.is_present("dump_ir_r") {
             dump_info::dump_ir(&ir_generator.ir_vec);
         }
+        let stack_offset = ir_generator.sum_stack_offset();
 
         // Code Generation
         let mut generator = Generator::new();

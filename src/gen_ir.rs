@@ -2,7 +2,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use crate::parser::AstKind::*;
-use crate::parser::{Ast, BinOpKind, Parser, UniOpKind};
+use crate::parser::{Ast, BinOpKind, UniOpKind};
 
 /// Kinds of IR operand.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,13 +76,21 @@ pub struct IRGenerator {
 }
 
 impl IRGenerator {
-    pub fn new(parser: Parser) -> Self {
+    pub fn new() -> Self {
         IRGenerator {
             ir_vec: Vec::new(),
             env: VecDeque::new(),
             reg_count: 0,
             label_number: 0,
         }
+    }
+
+    pub fn sum_stack_offset(&self) -> usize {
+        let mut sum = 0;
+        for env in self.env.iter() {
+            sum += env.current_var_offset;
+        }
+        sum
     }
 
     pub fn gen_ir(&mut self, asts: &Vec<Ast>) {
@@ -236,9 +244,9 @@ mod tests {
         let code = "int a = 3; int b = 2; int c = a * b; return c;";
         let mut lexer = Lexer::new(code);
         let tokens = lexer.lex().unwrap();
-        let mut parser = Parser::new();
-        let ast = parser.parse(tokens.to_vec()).unwrap();
-        let mut ir_generator = IRGenerator::new(parser);
+        let mut parser = Parser::new(&tokens);
+        let ast = parser.parse().unwrap();
+        let mut ir_generator = IRGenerator::new();
         ir_generator.gen_ir(&ast);
 
         let ir_vec = vec![
