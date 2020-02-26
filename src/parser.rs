@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::iter::Peekable;
 
 use crate::lexer::{Token, TokenKind};
@@ -26,6 +25,9 @@ pub enum AstKind {
         cond: Box<Ast>,
         then: Box<Ast>,
         els: Option<Box<Ast>>,
+    },
+    CompStmt {
+        stmts: Vec<Ast>,
     },
     Assignment {
         lhs: Box<Ast>,
@@ -123,16 +125,12 @@ where
 
 #[derive(Debug, Clone)]
 pub struct Parser {
-    pub env: HashMap<String, usize>,
     pub stack_offset: usize,
 }
 
 impl Parser {
     pub fn new() -> Self {
-        Parser {
-            env: HashMap::new(),
-            stack_offset: 0,
-        }
+        Parser { stack_offset: 0 }
     }
 
     /// Parse tokens and build AST.
@@ -141,7 +139,6 @@ impl Parser {
         let mut asts = Vec::new();
         loop {
             let ast = self.parse_stmt(&mut tokens)?;
-            expect_token(&mut tokens, TokenKind::Semicolon)?;
             asts.push(ast);
             match tokens.peek() {
                 Some(_) => continue,
@@ -152,7 +149,7 @@ impl Parser {
     }
 
     /// BNF:
-    ///     STMT ::= ASSIGN | DECL_VAR | "return" ASSIGN
+    ///     STMT ::= ASSIGN | DECL_VAR | "if" COMP_STMT | COMP_STMT | "return" ASSIGN
     fn parse_stmt<Tokens>(&mut self, tokens: &mut Peekable<Tokens>) -> Result<Ast, ParseError>
     where
         Tokens: Iterator<Item = Token>,
@@ -175,10 +172,23 @@ impl Parser {
                     loc.clone(),
                 ))
             }
+            Some(TokenKind::LBrace) => {
+                tokens.next();
+                let mut stmts = Vec::new();
+                let mut loc = Loc(std::usize::MAX, 0);
+                while tokens.peek().map(|token| &token.value) != Some(&TokenKind::RBrace) {
+                    let stmt = self.parse_stmt(tokens)?;
+                    loc = loc.merge(&stmt.loc);
+                    stmts.push(stmt);
+                }
+                tokens.next();
+                Ok(Ast::new(AstKind::CompStmt { stmts }, loc))
+            }
             Some(TokenKind::Return) => {
                 tokens.next();
                 let expr = self.parse_assign(tokens)?;
                 let loc = &expr.loc;
+                expect_token(tokens, TokenKind::Semicolon)?;
                 Ok(Ast::new(
                     AstKind::Return {
                         expr: Box::new(expr.clone()),
@@ -186,7 +196,11 @@ impl Parser {
                     loc.clone(),
                 ))
             }
-            _ => self.parse_assign(tokens),
+            _ => {
+                let ast = self.parse_assign(tokens)?;
+                expect_token(tokens, TokenKind::Semicolon)?;
+                Ok(ast)
+            }
         }
     }
 
@@ -221,13 +235,11 @@ impl Parser {
             .ok_or(ParseError::Eof)
             .and_then(|token| match token.value {
                 TokenKind::Identifier(var) => {
-                    self.stack_offset += 8;
-                    self.env.insert(var.clone(), self.stack_offset);
-
                     let lhs = Ast::new(AstKind::Variable(var.clone()), token.loc);
                     expect_token(tokens, TokenKind::Assignment)?;
                     let rhs = self.parse_add(tokens)?;
                     let loc = lhs.loc.merge(&rhs.loc);
+                    expect_token(tokens, TokenKind::Semicolon)?;
                     Ok(Ast::new(
                         AstKind::Decl {
                             lhs: Box::new(lhs),
