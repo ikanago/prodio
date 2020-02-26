@@ -277,4 +277,40 @@ mod tests {
         ];
         assert_eq!(ir_generator.ir_vec, ir_vec)
     }
+
+    #[test]
+    fn test_stmt() {
+        let code = "int a = 1; if (a) { a = 2; return a; } return a;";
+        let mut lexer = Lexer::new(code);
+        let tokens = lexer.lex().unwrap();
+        let mut parser = Parser::new(&tokens);
+        let ast = parser.parse().unwrap();
+        let mut ir_generator = IRGenerator::new();
+        ir_generator.gen_ir(&ast);
+
+        let ir_vec = vec![
+            IR::new(IROp::BpOffset, Some(1), Some(8)),
+            IR::new(IROp::Imm, Some(2), Some(1)),
+            IR::new(IROp::Store, Some(1), Some(2)),
+            IR::new(IROp::Kill, Some(1), None),
+            IR::new(IROp::Kill, Some(2), None),
+            IR::new(IROp::BpOffset, Some(3), Some(8)),
+            IR::new(IROp::Load, Some(3), Some(3)),
+            IR::new(IROp::Cond, Some(3), Some(1)),
+            IR::new(IROp::Kill, Some(3), None),
+            IR::new(IROp::BpOffset, Some(4), Some(8)),
+            IR::new(IROp::Imm, Some(5), Some(2)),
+            IR::new(IROp::Store, Some(4), Some(5)),
+            IR::new(IROp::BpOffset, Some(6), Some(8)),
+            IR::new(IROp::Load, Some(6), Some(6)),
+            IR::new(IROp::Return, Some(6), None),
+            IR::new(IROp::Kill, Some(6), None),
+            IR::new(IROp::Label, Some(1), None),
+            IR::new(IROp::BpOffset, Some(7), Some(8)),
+            IR::new(IROp::Load, Some(7), Some(7)),
+            IR::new(IROp::Return, Some(7), None),
+            IR::new(IROp::Kill, Some(7), None),
+        ];
+        assert_eq!(ir_generator.ir_vec, ir_vec)
+    }
 }
