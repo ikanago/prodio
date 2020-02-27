@@ -1,5 +1,5 @@
 /// Struct to have location of code.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Loc(pub usize, pub usize);
 
 impl Loc {
@@ -12,7 +12,7 @@ impl Loc {
 
 /// Struct to hold value and location.
 /// `value` will be Token or AST node.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Annotation<T> {
     pub value: T,
     pub loc: Loc,
