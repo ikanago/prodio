@@ -2,7 +2,7 @@
 
 # Script to compile and run assembly code.
 source_file=$1
-asm_file=$(echo ${source_file} | sed -e "s/\.c$/\.s/")
+asm_file=$(echo ${source_file} | sed -e "s/\.pr$/\.s/")
 obj_file=${source_file%.*}
 
 cargo run -- ${source_file} -o ${asm_file}

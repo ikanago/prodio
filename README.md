@@ -9,7 +9,7 @@ I'm not going to develop a practical language, but I plan to implement a lot of 
 ## Usage💻
 How to compile and run C source code:
 ```bash
-./run.sh <CODE(*.pro)>
+./run.sh <CODE(*.pr)>
 ```
 Then return code is prompted as a result of the program.
 

@@ -8,7 +8,9 @@ use crate::util::{Annotation, Loc};
 pub enum TokenKind {
     Number(usize),
     Identifier(String),
-    Int,
+    Let,
+    Colon,
+    U64,
     Plus,
     Minus,
     Asterisk,
@@ -51,7 +53,8 @@ fn new_token(token_kind: TokenKind, start: usize, end: usize) -> Token {
 
 fn reserve_keywords() -> HashMap<String, TokenKind> {
     let mut keywords = HashMap::new();
-    keywords.insert("int".to_string(), TokenKind::Int);
+    keywords.insert("let".to_string(), TokenKind::Let);
+    keywords.insert("u64".to_string(), TokenKind::U64);
     keywords.insert("if".to_string(), TokenKind::If);
     keywords.insert("return".to_string(), TokenKind::Return);
     keywords
@@ -90,6 +93,7 @@ impl<'a> Lexer<'a> {
                 b')' => self.lex_rparen(),
                 b'{' => self.lex_lbrace(),
                 b'}' => self.lex_rbrace(),
+                b':' => self.lex_colon(),
                 b'0'..=b'9' => self.lex_number(),
                 b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(&keywords),
                 b';' => self.lex_semicolon(),
@@ -147,6 +151,11 @@ impl<'a> Lexer<'a> {
         self.pos += 1;
     }
 
+    fn lex_colon(&mut self) {
+        self.tokens.push(token!(Colon, self.pos, self.pos + 1));
+        self.pos += 1;
+    }
+
     fn lex_number(&mut self) {
         let start = self.pos;
         let end = self.recognize_multiple_char(|b| b"0123456789".contains(&b));
@@ -199,49 +208,76 @@ mod tests {
     use crate::util::Loc;
 
     #[test]
-    fn test_lexer() {
-        let mut lexer = Lexer::new("+/*(-)");
+    fn test_calc() -> std::io::Result<()> {
+        let source_code = crate::read_file_content("examples/calc.pr")?;
+        let mut lexer = Lexer::new(&source_code);
         let tokens = lexer.lex();
         assert_eq!(
             tokens,
             Ok(&vec![
-                token!(Plus, 0, 1),
-                token!(Slash, 1, 2),
-                token!(Asterisk, 2, 3),
-                token!(LParen, 3, 4),
-                token!(Minus, 4, 5),
-                token!(RParen, 5, 6),
-            ]),
-        );
-
-        let mut lexer = Lexer::new("int a = 3; int b = 2; int c = a * b; return c;");
-        let tokens = lexer.lex();
-        println!("{:?}", tokens);
-        assert_eq!(
-            tokens,
-            Ok(&vec![
-                token!(Int, 0, 3),
+                token!(Let, 0, 3),
                 token!(Identifier("a".to_string()), 4, 5),
-                token!(Assignment, 6, 7),
-                token!(Number(3), 8, 9),
-                token!(Semicolon, 9, 10),
-                token!(Int, 11, 14),
-                token!(Identifier("b".to_string()), 15, 16),
-                token!(Assignment, 17, 18),
-                token!(Number(2), 19, 20),
-                token!(Semicolon, 20, 21),
-                token!(Int, 22, 25),
-                token!(Identifier("c".to_string()), 26, 27),
-                token!(Assignment, 28, 29),
-                token!(Identifier("a".to_string()), 30, 31),
-                token!(Asterisk, 32, 33),
-                token!(Identifier("b".to_string()), 34, 35),
-                token!(Semicolon, 35, 36),
-                token!(Return, 37, 43),
-                token!(Identifier("c".to_string()), 44, 45),
-                token!(Semicolon, 45, 46),
+                token!(Colon, 5, 6),
+                token!(U64, 7, 10),
+                token!(Assignment, 11, 12),
+                token!(Number(3), 13, 14),
+                token!(Semicolon, 14, 15),
+                token!(Let, 16, 19),
+                token!(Identifier("b".to_string()), 20, 21),
+                token!(Colon, 21, 22),
+                token!(U64, 23, 26),
+                token!(Assignment, 27, 28),
+                token!(Number(2), 29, 30),
+                token!(Semicolon, 30, 31),
+                token!(Let, 32, 35),
+                token!(Identifier("c".to_string()), 36, 37),
+                token!(Colon, 37, 38),
+                token!(U64, 39, 42),
+                token!(Assignment, 43, 44),
+                token!(Identifier("a".to_string()), 45, 46),
+                token!(Asterisk, 47, 48),
+                token!(Identifier("b".to_string()), 49, 50),
+                token!(Semicolon, 50, 51),
+                token!(Return, 52, 58),
+                token!(Identifier("c".to_string()), 59, 60),
+                token!(Semicolon, 60, 61),
             ]),
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_stmt() -> std::io::Result<()> {
+        let source_code = crate::read_file_content("examples/stmt.pr")?;
+        let mut lexer = Lexer::new(&source_code);
+        let tokens = lexer.lex();
+        assert_eq!(
+            tokens,
+            Ok(&vec![
+                token!(Let, 0, 3),
+                token!(Identifier("a".to_string()), 4, 5),
+                token!(Colon, 5, 6),
+                token!(U64, 7, 10),
+                token!(Assignment, 11, 12),
+                token!(Number(1), 13, 14),
+                token!(Semicolon, 14, 15),
+                token!(If, 16, 18),
+                token!(Identifier("a".to_string()), 19, 20),
+                token!(LBrace, 21, 22),
+                token!(Identifier("a".to_string()), 27, 28),
+                token!(Assignment, 29, 30),
+                token!(Number(2), 31, 32),
+                token!(Semicolon, 32, 33),
+                token!(Return, 38, 44),
+                token!(Identifier("a".to_string()), 45, 46),
+                token!(Semicolon, 46, 47),
+                token!(RBrace, 48, 49),
+                token!(Return, 50, 56),
+                token!(Identifier("a".to_string()), 57, 58),
+                token!(Semicolon, 58, 59),
+            ]),
+        );
+        Ok(())
     }
 
     #[test]

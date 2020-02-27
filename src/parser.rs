@@ -47,6 +47,16 @@ impl Ast {
         Self::new(AstKind::Variable(var), loc)
     }
 
+    pub fn decl(lhs: Ast, rhs: Ast, loc: Loc) -> Self {
+        Self::new(
+            AstKind::Decl {
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            },
+            loc,
+        )
+    }
+
     pub fn uniop(op: UniOpKind, e: Ast, loc: Loc) -> Self {
         Self::new(
             AstKind::UniOp {
@@ -68,11 +78,39 @@ impl Ast {
         )
     }
 
+    pub fn if_stmt(cond: Ast, then: Ast, els: Option<Ast>, loc: Loc) -> Self {
+        let els = match els {
+            Some(els) => Some(Box::new(els)),
+            None => None,
+        };
+        Self::new(
+            AstKind::If {
+                cond: Box::new(cond),
+                then: Box::new(then),
+                els,
+            },
+            loc,
+        )
+    }
+
+    pub fn comp_stmt(stmts: Vec<Ast>, loc: Loc) -> Self {
+        Self::new(AstKind::CompStmt { stmts }, loc)
+    }
+
     pub fn assignment(lhs: Ast, rhs: Ast, loc: Loc) -> Self {
         Self::new(
             AstKind::Assignment {
                 lhs: Box::new(lhs),
                 rhs: Box::new(rhs),
+            },
+            loc,
+        )
+    }
+
+    pub fn return_stmt(expr: Ast, loc: Loc) -> Self {
+        Self::new(
+            AstKind::Return {
+                expr: Box::new(expr),
             },
             loc,
         )
@@ -166,12 +204,10 @@ impl<'a> Parser<'a> {
     ///     STMT ::= ASSIGN | DECL_VAR | "if" COMP_STMT | COMP_STMT | "return" ASSIGN
     fn parse_stmt(&mut self) -> Result<Ast, ParseError> {
         match self.peek().map(|token| &token.value) {
-            Some(TokenKind::Int) => self.parse_decl_var(),
+            Some(TokenKind::Let) => self.parse_decl_var(),
             Some(TokenKind::If) => {
                 self.next();
-                self.expect_token(TokenKind::LParen)?;
                 let cond = self.parse_assign()?;
-                self.expect_token(TokenKind::RParen)?;
                 let then = self.parse_stmt()?;
                 let loc = cond.loc.merge(&then.loc);
                 Ok(Ast::new(
@@ -239,6 +275,8 @@ impl<'a> Parser<'a> {
             .and_then(|token| match token.value {
                 TokenKind::Identifier(var) => {
                     let lhs = Ast::new(AstKind::Variable(var.clone()), token.loc);
+                    self.expect_token(TokenKind::Colon)?;
+                    self.expect_token(TokenKind::U64)?;
                     self.expect_token(TokenKind::Assignment)?;
                     let rhs = self.parse_add()?;
                     let loc = lhs.loc.merge(&rhs.loc);
@@ -357,60 +395,78 @@ mod tests {
     use crate::util::Loc;
 
     #[test]
-    fn test_calculate() {
-        let code = "(5 + 2) * 31 - -10;";
-        let mut lexer = Lexer::new(code);
-        let tokens = lexer.lex().unwrap();
-        let mut parser = Parser::new(&tokens);
-        let ast = parser.parse();
-        assert_eq!(
-            ast,
-            Ok(vec![Ast::binop(
-                BinOpKind::Sub,
-                Ast::binop(
-                    BinOpKind::Mul,
-                    Ast::binop(
-                        BinOpKind::Add,
-                        Ast::num(5, Loc(1, 2)),
-                        Ast::num(2, Loc(5, 6)),
-                        Loc(1, 6),
-                    ),
-                    Ast::num(31, Loc(10, 12)),
-                    Loc(1, 12),
-                ),
-                Ast::uniop(UniOpKind::Minus, Ast::num(10, Loc(16, 18)), Loc(16, 18)),
-                Loc(1, 18),
-            )])
-        )
-    }
-
-    #[test]
-    fn test_assignment() {
-        let code = "abc = 3; def = 5; abc + def;";
-        let mut lexer = Lexer::new(code);
+    fn test_calc() -> std::io::Result<()> {
+        let source_code = crate::read_file_content("examples/calc.pr")?;
+        let mut lexer = Lexer::new(&source_code);
         let tokens = lexer.lex().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse();
         assert_eq!(
             ast,
             Ok(vec![
-                Ast::assignment(
-                    Ast::variable("abc".to_string(), Loc(0, 3)),
-                    Ast::num(3, Loc(6, 7)),
-                    Loc(0, 7),
+                Ast::decl(
+                    Ast::variable("a".to_string(), Loc(4, 5)),
+                    Ast::num(3, Loc(13, 14)),
+                    Loc(4, 14)
                 ),
-                Ast::assignment(
-                    Ast::variable("def".to_string(), Loc(9, 12)),
-                    Ast::num(5, Loc(15, 16)),
-                    Loc(9, 16),
+                Ast::decl(
+                    Ast::variable("b".to_string(), Loc(20, 21)),
+                    Ast::num(2, Loc(29, 30)),
+                    Loc(20, 30)
                 ),
-                Ast::binop(
-                    BinOpKind::Add,
-                    Ast::variable("abc".to_string(), Loc(18, 21)),
-                    Ast::variable("def".to_string(), Loc(24, 27)),
-                    Loc(18, 27),
+                Ast::decl(
+                    Ast::variable("c".to_string(), Loc(36, 37)),
+                    Ast::binop(
+                        BinOpKind::Mul,
+                        Ast::variable("a".to_string(), Loc(45, 46)),
+                        Ast::variable("b".to_string(), Loc(49, 50)),
+                        Loc(45, 50)
+                    ),
+                    Loc(36, 50)
                 ),
+                Ast::return_stmt(Ast::variable("c".to_string(), Loc(59, 60)), Loc(59, 60)),
             ])
-        )
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_stmt() -> std::io::Result<()> {
+        let source_code = crate::read_file_content("examples/stmt.pr")?;
+        let mut lexer = Lexer::new(&source_code);
+        let tokens = lexer.lex().unwrap();
+        let mut parser = Parser::new(&tokens);
+        let ast = parser.parse();
+        assert_eq!(
+            ast,
+            Ok(vec![
+                Ast::decl(
+                    Ast::variable("a".to_string(), Loc(4, 5)),
+                    Ast::num(1, Loc(13, 14)),
+                    Loc(4, 14)
+                ),
+                Ast::if_stmt(
+                    Ast::variable("a".to_string(), Loc(19, 20)),
+                    Ast::comp_stmt(
+                        vec![
+                            Ast::assignment(
+                                Ast::variable("a".to_string(), Loc(27, 28)),
+                                Ast::num(2, Loc(31, 32)),
+                                Loc(27, 32)
+                            ),
+                            Ast::return_stmt(
+                                Ast::variable("a".to_string(), Loc(45, 46)),
+                                Loc(45, 46)
+                            )
+                        ],
+                        Loc(27, 46)
+                    ),
+                    None,
+                    Loc(19, 46)
+                ),
+                Ast::return_stmt(Ast::variable("a".to_string(), Loc(57, 58)), Loc(57, 58)),
+            ])
+        );
+        Ok(())
     }
 }

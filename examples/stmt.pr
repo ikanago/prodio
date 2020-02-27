@@ -1,5 +1,5 @@
-int a = 1;
-if (a) {
+let a: u64 = 1;
+if a {
     a = 2;
     return a;
 }

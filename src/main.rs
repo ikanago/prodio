@@ -7,7 +7,7 @@ use prodio::gen_ir;
 use prodio::lexer::Lexer;
 use prodio::parser::Parser;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Write;
 
 fn main() -> std::io::Result<()> {
     let matches = clap_app!(prodio =>
@@ -24,9 +24,7 @@ fn main() -> std::io::Result<()> {
     .get_matches();
 
     if let Some(ref source_file_path) = matches.value_of("CODE") {
-        let mut source_file = File::open(source_file_path)?;
-        let mut source_code = String::new();
-        source_file.read_to_string(&mut source_code)?;
+        let source_code = prodio::read_file_content(source_file_path)?;
 
         // Lex
         let mut lexer = Lexer::new(&source_code);

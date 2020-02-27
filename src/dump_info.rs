@@ -5,7 +5,7 @@ use crate::parser::Ast;
 pub fn dump_tokens(tokens: &Vec<Token>) {
     eprintln!("------DUMP TOKEN------");
     for token in tokens {
-        eprintln!("{:?}", token.value);
+        eprintln!("{:?}, {:?}, {:?}", token.value, token.loc.0, token.loc.1);
     }
     eprintln!();
 }
