@@ -278,7 +278,7 @@ impl<'a> Parser<'a> {
     }
 
     /// BNF:
-    ///     MUL ::= UNARY ("*" UNARY | "/"UNARY)*
+    ///     MUL ::= UNARY ("*" UNARY | "/" UNARY)*
     ///
     fn parse_mul(&mut self) -> Result<Ast, ParseError> {
         let mut lhs = self.parse_unary()?;
@@ -301,7 +301,7 @@ impl<'a> Parser<'a> {
     }
 
     /// BNF:
-    ///     UNARY ::= NUMBER | "(" ADD ")"
+    ///     UNARY ::= ("+" | "-") PRIMARY | PRIMARY
     fn parse_unary(&mut self) -> Result<Ast, ParseError> {
         match self.peek().map(|token| &token.value) {
             Some(TokenKind::Plus) | Some(TokenKind::Minus) => {
@@ -316,18 +316,18 @@ impl<'a> Parser<'a> {
                     }) => UniOpKind::Minus,
                     _ => unreachable!(),
                 };
-                let node = self.parse_term()?;
+                let node = self.parse_primary()?;
                 let loc = node.loc.clone();
                 Ok(Ast::uniop(op, node, loc))
             }
-            _ => self.parse_term(),
+            _ => self.parse_primary(),
         }
     }
 
     /// BNF:
-    ///     TERM ::= DIGIT* | VARIABLE | "(" ASSIGN ")"
+    ///     PRIMARY ::= DIGIT* | VARIABLE | "(" ASSIGN ")"
     ///     DIGIT  ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
-    fn parse_term(&mut self) -> Result<Ast, ParseError> {
+    fn parse_primary(&mut self) -> Result<Ast, ParseError> {
         self.next()
             .ok_or(ParseError::Eof)
             .and_then(|token| match token.value {

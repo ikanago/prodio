@@ -3,20 +3,20 @@
 ![Rust](https://github.com/ikanago/prodio/workflows/Rust/badge.svg)
 
 ## What's this🤔
-This is a C compiler written in Rust. "Prodio" means "advance" in Latin.
-
-I'm developing this compiler as a rebuild of ycc, C compiler written in C(refer to my Repositories). I want to create advanced compiler compared to ycc in functionality and readability.
+This is a new programming language written in Rust. "Prodio" means "advance" in Latin.  
+I'm not going to develop a practical language, but I plan to implement a lot of functionalities I've never implemented.
 
 ## Usage💻
 How to compile and run C source code:
 ```bash
-./run.sh <CODE(*.c)>
+./run.sh <CODE(*.pro)>
 ```
 Then return code is prompted as a result of the program.
 
 ## Contents⚙
 * arithmetical calculation
 * variable
+* `if` statement
 
 ## Compile Path🛠
 ```
