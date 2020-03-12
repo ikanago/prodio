@@ -128,7 +128,6 @@ impl Ast {
 /// Data type of unary operator.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum UniOpKind {
-    Plus,
     Minus,
 }
 
@@ -364,12 +363,8 @@ impl<'a> Parser<'a> {
     ///     UNARY ::= ("+" | "-") PRIMARY | PRIMARY
     fn parse_unary(&mut self) -> Result<Ast, ParseError> {
         match self.peek().map(|token| &token.value) {
-            Some(TokenKind::Plus) | Some(TokenKind::Minus) => {
+            Some(TokenKind::Minus) => {
                 let op = match self.next() {
-                    Some(Token {
-                        value: TokenKind::Plus,
-                        loc: _loc,
-                    }) => UniOpKind::Plus,
                     Some(Token {
                         value: TokenKind::Minus,
                         loc: _loc,

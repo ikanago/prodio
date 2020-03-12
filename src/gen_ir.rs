@@ -216,7 +216,6 @@ impl Function {
         let node = self.gen_expr(node);
 
         let ir = match op {
-            UniOpKind::Plus => panic!("Unary plus is not implemented!"),
             UniOpKind::Minus => IR::new(IROp::Minus, node, None),
         };
         self.ir_vec.push(ir);
