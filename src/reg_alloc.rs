@@ -73,7 +73,7 @@ mod tests {
         ir_generator.reg_alloc();
 
         assert_eq!(
-            ir_generator.ir_vec,
+            ir_generator.funcs[0].ir_vec,
             vec![
                 IR::new(IROp::BpOffset, Some(0), Some(8)),
                 IR::new(IROp::Imm, Some(1), Some(3)),
@@ -116,7 +116,7 @@ mod tests {
         ir_generator.reg_alloc();
 
         assert_eq!(
-            ir_generator.ir_vec,
+            ir_generator.funcs[0].ir_vec,
             vec![
                 IR::new(IROp::BpOffset, Some(0), Some(8)),
                 IR::new(IROp::Imm, Some(1), Some(1)),

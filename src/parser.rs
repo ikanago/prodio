@@ -413,7 +413,7 @@ impl<'a> Parser<'a> {
 mod tests {
     use crate::lexer::Lexer;
     use crate::parser::Parser;
-    use crate::parser::{Ast, BinOpKind, UniOpKind};
+    use crate::parser::{Ast, BinOpKind};
     use crate::util::Loc;
 
     #[test]
@@ -425,29 +425,33 @@ mod tests {
         let ast = parser.parse();
         assert_eq!(
             ast,
-            Ok(vec![
-                Ast::decl(
-                    Ast::variable("a".to_string(), Loc(4, 5)),
-                    Ast::num(3, Loc(13, 14)),
-                    Loc(4, 14)
-                ),
-                Ast::decl(
-                    Ast::variable("b".to_string(), Loc(20, 21)),
-                    Ast::num(2, Loc(29, 30)),
-                    Loc(20, 30)
-                ),
-                Ast::decl(
-                    Ast::variable("c".to_string(), Loc(36, 37)),
-                    Ast::binop(
-                        BinOpKind::Mul,
-                        Ast::variable("a".to_string(), Loc(45, 46)),
-                        Ast::variable("b".to_string(), Loc(49, 50)),
-                        Loc(45, 50)
+            Ok(vec![Ast::func(
+                "main".to_string(),
+                vec![
+                    Ast::decl(
+                        Ast::variable("a".to_string(), Loc(22, 23)),
+                        Ast::num(3, Loc(31, 32)),
+                        Loc(22, 32)
                     ),
-                    Loc(36, 50)
-                ),
-                Ast::return_stmt(Ast::variable("c".to_string(), Loc(59, 60)), Loc(59, 60)),
-            ])
+                    Ast::decl(
+                        Ast::variable("b".to_string(), Loc(42, 43)),
+                        Ast::num(2, Loc(51, 52)),
+                        Loc(42, 52)
+                    ),
+                    Ast::decl(
+                        Ast::variable("c".to_string(), Loc(62, 63)),
+                        Ast::binop(
+                            BinOpKind::Mul,
+                            Ast::variable("a".to_string(), Loc(71, 72)),
+                            Ast::variable("b".to_string(), Loc(75, 76)),
+                            Loc(71, 76)
+                        ),
+                        Loc(62, 76)
+                    ),
+                    Ast::return_stmt(Ast::variable("c".to_string(), Loc(89, 90)), Loc(89, 90)),
+                ],
+                Loc(22, 90)
+            )])
         );
         Ok(())
     }
@@ -461,33 +465,37 @@ mod tests {
         let ast = parser.parse();
         assert_eq!(
             ast,
-            Ok(vec![
-                Ast::decl(
-                    Ast::variable("a".to_string(), Loc(4, 5)),
-                    Ast::num(1, Loc(13, 14)),
-                    Loc(4, 14)
-                ),
-                Ast::if_stmt(
-                    Ast::variable("a".to_string(), Loc(19, 20)),
-                    Ast::comp_stmt(
-                        vec![
-                            Ast::assignment(
-                                Ast::variable("a".to_string(), Loc(27, 28)),
-                                Ast::num(2, Loc(31, 32)),
-                                Loc(27, 32)
-                            ),
-                            Ast::return_stmt(
-                                Ast::variable("a".to_string(), Loc(45, 46)),
-                                Loc(45, 46)
-                            )
-                        ],
-                        Loc(27, 46)
+            Ok(vec![Ast::func(
+                "main".to_string(),
+                vec![
+                    Ast::decl(
+                        Ast::variable("a".to_string(), Loc(22, 23)),
+                        Ast::num(1, Loc(31, 32)),
+                        Loc(22, 32)
                     ),
-                    None,
-                    Loc(19, 46)
-                ),
-                Ast::return_stmt(Ast::variable("a".to_string(), Loc(57, 58)), Loc(57, 58)),
-            ])
+                    Ast::if_stmt(
+                        Ast::variable("a".to_string(), Loc(41, 42)),
+                        Ast::comp_stmt(
+                            vec![
+                                Ast::assignment(
+                                    Ast::variable("a".to_string(), Loc(53, 54)),
+                                    Ast::num(2, Loc(57, 58)),
+                                    Loc(53, 58)
+                                ),
+                                Ast::return_stmt(
+                                    Ast::variable("a".to_string(), Loc(75, 76)),
+                                    Loc(75, 76)
+                                )
+                            ],
+                            Loc(53, 76)
+                        ),
+                        None,
+                        Loc(41, 76)
+                    ),
+                    Ast::return_stmt(Ast::variable("a".to_string(), Loc(95, 96)), Loc(95, 96)),
+                ],
+                Loc(22, 96)
+            )])
         );
         Ok(())
     }

@@ -52,7 +52,6 @@ fn main() -> std::io::Result<()> {
         if matches.is_present("dump_ir_r") {
             dump_info::dump_ir(&ir_generator);
         }
-        // let stack_offset = ir_generator.sum_stack_offset();
 
         // Code Generation
         let mut generator = Generator::new();

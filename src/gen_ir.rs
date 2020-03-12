@@ -24,7 +24,8 @@ pub enum IROp {
 }
 
 /// Inner representation.
-/// Each `lhs` and `rhs` specifies a indice of virtual register.
+/// Each `lhs` and `rhs` specifies a indice of virtual register or integer literal.
+/// What kind of element each `lhs` and `rhs` represents is defined by kind of `IROp`.
 /// Later, they are allocated to a real register in `reg_alloc.rs`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IR {
@@ -40,7 +41,7 @@ impl IR {
 }
 
 /// Struct to contain pairs of variables and offset values from rbp.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Env {
     // Mapping variable name to offset.
     pub local_var_map: HashMap<String, usize>,
@@ -74,6 +75,8 @@ impl IRGenerator {
         IRGenerator { funcs: Vec::new() }
     }
 
+    /// Iterates over a vector of AST whose root is a function definition
+    /// and generate IR for each of them.
     pub fn gen_ir(&mut self, asts: &Vec<Ast>) {
         for ast in asts {
             let mut func = Function::new();
@@ -82,6 +85,7 @@ impl IRGenerator {
         }
     }
 
+    /// Do register allocation for each `Function`.
     pub fn reg_alloc(&mut self) {
         for func in &mut self.funcs {
             func.reg_alloc();
@@ -89,15 +93,16 @@ impl IRGenerator {
     }
 }
 
-#[derive(Debug, Clone)]
+/// Holds a result of IR generation from an AST.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    // Vec to store IRs.
+    // Vec to store generated IRs.
     pub ir_vec: Vec<IR>,
     // Vector of `Env`.
     pub env: VecDeque<Env>,
     // Function name.
     pub name: String,
-    // Used register count in a AST.
+    // Used register count in the AST.
     reg_count: usize,
     // Current label number for controll statement.
     pub label_number: usize,
@@ -114,6 +119,7 @@ impl Function {
         }
     }
 
+    /// Returns sum of stack size of the function.
     pub fn sum_stack_offset(&self) -> usize {
         let mut sum = 0;
         for env in self.env.iter() {
@@ -151,6 +157,8 @@ impl Function {
 
     fn gen_ir_lval(&mut self, var_name: &String) -> Option<usize> {
         let mut env_iter = self.env.iter_mut();
+        // Because `Env` of inner scope is placed in the front of vector,
+        // accessibility of local variables is controlled by iterating over vector from begining.
         let var_offset = loop {
             let env = env_iter.next().expect("Variable not found");
             if let Some(offset) = env.local_var_map.get(var_name) {
@@ -283,7 +291,7 @@ mod tests {
         ir_generator.gen_ir(&ast);
 
         assert_eq!(
-            ir_generator.ir_vec,
+            ir_generator.funcs[0].ir_vec,
             vec![
                 IR::new(IROp::BpOffset, Some(1), Some(8)),
                 IR::new(IROp::Imm, Some(2), Some(3)),
@@ -325,7 +333,7 @@ mod tests {
         ir_generator.gen_ir(&ast);
 
         assert_eq!(
-            ir_generator.ir_vec,
+            ir_generator.funcs[0].ir_vec,
             vec![
                 IR::new(IROp::BpOffset, Some(1), Some(8)),
                 IR::new(IROp::Imm, Some(2), Some(1)),
