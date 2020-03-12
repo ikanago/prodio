@@ -1,6 +1,8 @@
-let a: u64 = 1;
-if a {
-    a = 2;
+func main() {
+    let a: u64 = 1;
+    if a {
+        a = 2;
+        return a;
+    }
     return a;
 }
-return a;

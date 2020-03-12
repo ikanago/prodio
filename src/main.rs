@@ -44,19 +44,19 @@ fn main() -> std::io::Result<()> {
         let mut ir_generator = gen_ir::IRGenerator::new();
         ir_generator.gen_ir(&asts);
         if matches.is_present("dump_ir_v") {
-            dump_info::dump_ir(&ir_generator.ir_vec);
+            dump_info::dump_ir(&ir_generator);
         }
 
         // Register allocation
         ir_generator.reg_alloc();
         if matches.is_present("dump_ir_r") {
-            dump_info::dump_ir(&ir_generator.ir_vec);
+            dump_info::dump_ir(&ir_generator);
         }
-        let stack_offset = ir_generator.sum_stack_offset();
+        // let stack_offset = ir_generator.sum_stack_offset();
 
         // Code Generation
         let mut generator = Generator::new();
-        generator.code_gen(&ir_generator.ir_vec, stack_offset);
+        generator.code_gen(&ir_generator);
 
         let output_file_path = match matches.value_of("OUTPUT") {
             Some(path) => path,

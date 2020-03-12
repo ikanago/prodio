@@ -66,20 +66,49 @@ impl Env {
 /// Entry point to generate IR.
 #[derive(Debug, Clone)]
 pub struct IRGenerator {
-    // Vec to store IRs.
-    pub ir_vec: Vec<IR>,
-    // Vector of `Env`.
-    pub env: VecDeque<Env>,
-    // Used register count in a AST.
-    reg_count: usize,
-    pub label_number: usize,
+    pub funcs: Vec<Function>,
 }
 
 impl IRGenerator {
     pub fn new() -> Self {
-        IRGenerator {
+        IRGenerator { funcs: Vec::new() }
+    }
+
+    pub fn gen_ir(&mut self, asts: &Vec<Ast>) {
+        for ast in asts {
+            let mut func = Function::new();
+            func.gen_ir(ast);
+            self.funcs.push(func);
+        }
+    }
+
+    pub fn reg_alloc(&mut self) {
+        for func in &mut self.funcs {
+            func.reg_alloc();
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Function {
+    // Vec to store IRs.
+    pub ir_vec: Vec<IR>,
+    // Vector of `Env`.
+    pub env: VecDeque<Env>,
+    // Function name.
+    pub name: String,
+    // Used register count in a AST.
+    reg_count: usize,
+    // Current label number for controll statement.
+    pub label_number: usize,
+}
+
+impl Function {
+    pub fn new() -> Self {
+        Function {
             ir_vec: Vec::new(),
             env: VecDeque::new(),
+            name: String::new(),
             reg_count: 0,
             label_number: 0,
         }
@@ -93,11 +122,8 @@ impl IRGenerator {
         sum
     }
 
-    pub fn gen_ir(&mut self, asts: &Vec<Ast>) {
-        self.env.push_front(Env::new());
-        for ast in asts {
-            self.gen_expr(ast);
-        }
+    pub fn gen_ir(&mut self, ast: &Ast) {
+        self.gen_expr(ast);
     }
 
     /// Generate IR for an AST.
@@ -108,6 +134,7 @@ impl IRGenerator {
             Decl { lhs, rhs } => self.gen_ir_decl_var(lhs, rhs),
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
+            Func { name, body } => self.gen_ir_func(name, body),
             If { cond, then, els } => self.gen_ir_if(cond, then, els),
             CompStmt { stmts } => self.gen_ir_comp_stmt(stmts),
             Assignment { lhs, rhs } => self.gen_ir_assignment(lhs, rhs),
@@ -186,6 +213,12 @@ impl IRGenerator {
         };
         self.ir_vec.push(ir);
         node
+    }
+
+    fn gen_ir_func(&mut self, name: &String, body: &Vec<Ast>) -> Option<usize> {
+        self.name = name.to_string();
+        self.gen_ir_comp_stmt(body);
+        None
     }
 
     fn gen_ir_if(&mut self, cond: &Ast, then: &Ast, _els: &Option<Box<Ast>>) -> Option<usize> {

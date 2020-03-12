@@ -19,6 +19,7 @@ pub enum TokenKind {
     RParen,
     LBrace,
     RBrace,
+    Func,
     If,
     Assignment,
     Semicolon,
@@ -55,6 +56,7 @@ fn reserve_keywords() -> HashMap<String, TokenKind> {
     let mut keywords = HashMap::new();
     keywords.insert("let".to_string(), TokenKind::Let);
     keywords.insert("u64".to_string(), TokenKind::U64);
+    keywords.insert("func".to_string(), TokenKind::Func);
     keywords.insert("if".to_string(), TokenKind::If);
     keywords.insert("return".to_string(), TokenKind::Return);
     keywords

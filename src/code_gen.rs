@@ -1,4 +1,4 @@
-use crate::gen_ir::{IROp, IR};
+use crate::gen_ir::{IROp, IR, IRGenerator};
 use crate::REGISTER_COUNT;
 
 const REGISTERS: [&str; REGISTER_COUNT] = ["rbx", "r10", "r11", "r12", "r13", "r14", "r15"];
@@ -15,16 +15,19 @@ impl Generator {
     }
 
     /// Entry point of code generation.
-    pub fn code_gen(&mut self, ir_vec: &Vec<IR>, stack_offset: usize) {
-        self.code.push(
-            ".intel_syntax noprefix\n.global main\nmain:\n  push rbp\n  mov rbp, rsp".to_string(),
-        );
-        self.code.push(format!("  sub rsp, {}", stack_offset));
-        for ir in ir_vec {
-            self.gen(ir);
-        }
-        self.code
+    pub fn code_gen(&mut self, ir_generator: &IRGenerator) {
+        for func in &ir_generator.funcs {
+            let stack_offset = func.sum_stack_offset();
+            self.code.push(
+                ".intel_syntax noprefix\n.global main\nmain:\n  push rbp\n  mov rbp, rsp".to_string(),
+            );
+            self.code.push(format!("  sub rsp, {}", stack_offset));
+            for ir in &func.ir_vec {
+                self.gen(ir);
+            }
+            self.code
             .push((".Lreturn:\n  mov rsp, rbp\n  pop rbp\n  ret").to_string());
+        }
     }
 
     /// Generate assembly code for an IR.

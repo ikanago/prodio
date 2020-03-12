@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use crate::gen_ir::{IRGenerator, IROp};
+use crate::gen_ir::{Function, IROp};
 use crate::REGISTER_COUNT;
 
-impl IRGenerator {
+impl Function {
     pub fn reg_alloc(&mut self) {
         // Remember whether each real register is used.
         let mut is_reg_used = [false; REGISTER_COUNT];
@@ -14,14 +14,14 @@ impl IRGenerator {
         for ir in &mut self.ir_vec {
             match ir.op {
                 IROp::Imm | IROp::BpOffset | IROp::Cond | IROp::Return => {
-                    ir.lhs = IRGenerator::alloc(ir.lhs, &mut is_reg_used, &mut reg_map)
+                    ir.lhs = Function::alloc(ir.lhs, &mut is_reg_used, &mut reg_map)
                 }
                 IROp::Add | IROp::Sub | IROp::Mul | IROp::Div | IROp::Store | IROp::Load => {
-                    ir.lhs = IRGenerator::alloc(ir.lhs, &mut is_reg_used, &mut reg_map);
-                    ir.rhs = IRGenerator::alloc(ir.rhs, &mut is_reg_used, &mut reg_map);
+                    ir.lhs = Function::alloc(ir.lhs, &mut is_reg_used, &mut reg_map);
+                    ir.rhs = Function::alloc(ir.rhs, &mut is_reg_used, &mut reg_map);
                 }
                 IROp::Kill => {
-                    ir.lhs = IRGenerator::alloc(ir.lhs, &mut is_reg_used, &mut reg_map);
+                    ir.lhs = Function::alloc(ir.lhs, &mut is_reg_used, &mut reg_map);
                     is_reg_used[ir.lhs.unwrap()] = false;
                 }
                 _ => (),
