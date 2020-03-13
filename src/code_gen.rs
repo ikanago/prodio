@@ -1,4 +1,4 @@
-use crate::gen_ir::{IROp, IR, IRGenerator};
+use crate::gen_ir::{IRGenerator, IROp, IR};
 use crate::REGISTER_COUNT;
 
 const REGISTERS: [&str; REGISTER_COUNT] = ["rbx", "r10", "r11", "r12", "r13", "r14", "r15"];
@@ -19,14 +19,15 @@ impl Generator {
         for func in &ir_generator.funcs {
             let stack_offset = func.sum_stack_offset();
             self.code.push(
-                ".intel_syntax noprefix\n.global main\nmain:\n  push rbp\n  mov rbp, rsp".to_string(),
+                ".intel_syntax noprefix\n.global main\nmain:\n  push rbp\n  mov rbp, rsp"
+                    .to_string(),
             );
             self.code.push(format!("  sub rsp, {}", stack_offset));
             for ir in &func.ir_vec {
                 self.gen(ir);
             }
             self.code
-            .push((".Lreturn:\n  mov rsp, rbp\n  pop rbp\n  ret").to_string());
+                .push((".Lreturn:\n  mov rsp, rbp\n  pop rbp\n  ret").to_string());
         }
     }
 

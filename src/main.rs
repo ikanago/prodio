@@ -28,14 +28,26 @@ fn main() -> std::io::Result<()> {
 
         // Lex
         let mut lexer = Lexer::new(&source_code);
-        let tokens = lexer.lex().unwrap();
+        let tokens = match lexer.lex() {
+            Ok(asts) => asts,
+            Err(error) => {
+                eprintln!("{}", error);
+                panic!()
+            }
+        };
         if matches.is_present("dump_token") {
             dump_info::dump_tokens(&tokens);
         }
 
         // Parse
         let mut parser = Parser::new(&tokens);
-        let asts = parser.parse().unwrap();
+        let asts = match parser.parse() {
+            Ok(asts) => asts,
+            Err(error) => {
+                eprintln!("{}", error);
+                panic!()
+            }
+        };
         if matches.is_present("dump_ast") {
             dump_info::dump_asts(&asts);
         }

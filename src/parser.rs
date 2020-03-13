@@ -1,5 +1,5 @@
-use crate::lexer::{Token, TokenKind};
-use crate::util::{Annotation, Loc};
+use crate::util::{Annotation, Loc, ParseError};
+use crate::{Token, TokenKind};
 
 /// Data type of AST node.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -140,17 +140,6 @@ pub enum BinOpKind {
     Div,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ParseError {
-    UnexpectedToken(Token),
-    NotExpression(Token),
-    NotOperator(Token),
-    UnclosedOpenParen(Token),
-    RedundantExpression(Token),
-    NoSemicolon,
-    Eof,
-}
-
 #[derive(Debug, Clone)]
 pub struct Parser<'a> {
     // Reference to vector of tokens given from `Lexer`.
@@ -188,7 +177,7 @@ impl<'a> Parser<'a> {
             if token.value == token_kind {
                 Ok(())
             } else {
-                Err(ParseError::UnexpectedToken(token))
+                Err(ParseError::NoSemicolon(token))
             }
         })
     }

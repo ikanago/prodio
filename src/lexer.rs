@@ -1,52 +1,8 @@
 use std::collections::HashMap;
 use std::str::from_utf8;
 
-use crate::util::{Annotation, Loc};
-
-/// Data type that represents Token.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum TokenKind {
-    Number(usize),
-    Identifier(String),
-    Let,
-    Colon,
-    U64,
-    Plus,
-    Minus,
-    Asterisk,
-    Slash,
-    LParen,
-    RParen,
-    LBrace,
-    RBrace,
-    Func,
-    If,
-    Assignment,
-    Semicolon,
-    Return,
-}
-
-pub type Token = Annotation<TokenKind>;
-
-/// Data type that represents lexical error.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum LexErrorKind {
-    InvalidChar(char),
-    Eof,
-}
-
-pub type LexError = Annotation<LexErrorKind>;
-
-impl LexError {
-    /// Unacceptable character.
-    pub fn invalid_char(c: char, loc: Loc) -> Self {
-        LexError::new(LexErrorKind::InvalidChar(c), loc)
-    }
-
-    pub fn eof(loc: Loc) -> Self {
-        LexError::new(LexErrorKind::Eof, loc)
-    }
-}
+use crate::util::{LexError, Loc};
+use crate::{Token, TokenKind};
 
 fn new_token(token_kind: TokenKind, start: usize, end: usize) -> Token {
     Token::new(token_kind, Loc(start, end))
