@@ -21,6 +21,7 @@ pub fn dump_asts(asts: &Vec<Ast>) {
 pub fn dump_ir(ir_generator: &IRGenerator) {
     eprintln!("------DUMP IR------");
     for func in &ir_generator.funcs {
+        eprintln!("{}", func.name);
         for ir in &func.ir_vec {
             eprintln!("({:?}, {:?}, {:?})", ir.op, ir.lhs, ir.rhs);
         }

@@ -15,10 +15,12 @@ pub enum IROp {
     Plus,
     Minus,
     BpOffset, // Load variable offset from $rbp.
+    FuncCall(String),
     Load,
     Store,
     Cond,
-    Label,
+    Label(String),
+    Jmp(String),
     Return,
     Kill,
 }
@@ -106,6 +108,8 @@ pub struct Function {
     reg_count: usize,
     // Current label number for controll statement.
     pub label_number: usize,
+    // Total stack size.
+    pub stack_size: usize,
 }
 
 impl Function {
@@ -116,6 +120,7 @@ impl Function {
             name: String::new(),
             reg_count: 0,
             label_number: 0,
+            stack_size: 0,
         }
     }
 
@@ -141,6 +146,7 @@ impl Function {
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
             Func { name, body } => self.gen_ir_func(name, body),
+            FuncCall { name } => self.gen_ir_func_call(name.to_string()),
             If { cond, then, els } => self.gen_ir_if(cond, then, els),
             CompStmt { stmts } => self.gen_ir_comp_stmt(stmts),
             Assignment { lhs, rhs } => self.gen_ir_assignment(lhs, rhs),
@@ -228,6 +234,14 @@ impl Function {
         None
     }
 
+    fn gen_ir_func_call(&mut self, name: String) -> Option<usize> {
+        self.reg_count += 1;
+        let reg = Some(self.reg_count);
+        let ir = IR::new(IROp::FuncCall(name), reg, None);
+        self.ir_vec.push(ir);
+        reg
+    }
+
     fn gen_ir_if(&mut self, cond: &Ast, then: &Ast, _els: &Option<Box<Ast>>) -> Option<usize> {
         self.label_number += 1;
         let reg_flag = self.gen_expr(cond);
@@ -236,7 +250,7 @@ impl Function {
         self.kill(reg_flag);
 
         self.gen_expr(then);
-        let ir_label = IR::new(IROp::Label, Some(self.label_number), None);
+        let ir_label = IR::new(IROp::Label("else".to_string()), Some(self.label_number), None);
         self.ir_vec.push(ir_label);
         None
     }
@@ -246,6 +260,7 @@ impl Function {
         for stmt in stmts {
             self.gen_expr(stmt);
         }
+        self.stack_size += self.sum_stack_offset();
         self.env.pop_front();
         None
     }
@@ -260,11 +275,24 @@ impl Function {
         reg_lhs
     }
 
+    fn gen_ir_label(&mut self, name: String) -> Option<usize> {
+        let ir = IR::new(IROp::Label(name), None, None);
+        self.ir_vec.push(ir);
+        None
+    }
+
+    fn gen_ir_jmp(&mut self, label_name: String) -> Option<usize> {
+        let ir = IR::new(IROp::Jmp(label_name), None, None);
+        self.ir_vec.push(ir);
+        None
+    }
+
     fn gen_ir_return(&mut self, expr: &Ast) -> Option<usize> {
         let reg_expr = self.gen_expr(expr);
         let ir = IR::new(IROp::Return, reg_expr, None);
         self.ir_vec.push(ir);
         self.kill(reg_expr);
+        self.gen_ir_jmp(format!("return_{}", self.name));
         reg_expr
     }
 

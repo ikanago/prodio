@@ -23,6 +23,9 @@ pub enum AstKind {
         name: String,
         body: Vec<Ast>,
     },
+    FuncCall {
+        name: String,
+    },
     If {
         cond: Box<Ast>,
         then: Box<Ast>,
@@ -84,6 +87,10 @@ impl Ast {
 
     pub fn func(name: String, body: Vec<Ast>, loc: Loc) -> Self {
         Self::new(AstKind::Func { name, body }, loc)
+    }
+
+    pub fn func_call(name: String, loc: Loc) -> Self {
+        Self::new(AstKind::FuncCall { name }, loc)
     }
 
     pub fn if_stmt(cond: Ast, then: Ast, els: Option<Ast>, loc: Loc) -> Self {
@@ -369,14 +376,26 @@ impl<'a> Parser<'a> {
     }
 
     /// BNF:
-    ///     PRIMARY ::= DIGIT* | IDENTIFIER | "(" ASSIGN ")"
+    ///     PRIMARY ::= DIGIT* | IDENTIFIER | IDENTIFIER "(" ")" | "(" ASSIGN ")"
     ///     DIGIT  ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
     fn parse_primary(&mut self) -> Result<Ast, ParseError> {
         self.next()
             .ok_or(ParseError::Eof)
             .and_then(|token| match token.value {
                 TokenKind::Number(n) => Ok(Ast::new(AstKind::Num(n), token.loc)),
-                TokenKind::Identifier(var) => Ok(Ast::new(AstKind::Variable(var), token.loc)),
+                TokenKind::Identifier(var) => {
+                    // Function call.
+                    if let Some(TokenKind::LParen) = self.peek().map(|t| &t.value) {
+                        self.next();
+                        let node = Ast::func_call(var, token.loc);
+                        self.expect_token(TokenKind::RParen)?;
+                        Ok(node)
+                    }
+                    // Access to local variable.
+                    else {
+                        Ok(Ast::new(AstKind::Variable(var), token.loc))
+                    }
+                }
                 TokenKind::LParen => {
                     let node = self.parse_add()?;
                     match self.next() {

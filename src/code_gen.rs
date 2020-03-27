@@ -16,18 +16,18 @@ impl Generator {
 
     /// Entry point of code generation.
     pub fn code_gen(&mut self, ir_generator: &IRGenerator) {
+        self.code.push(".intel_syntax noprefix\n".to_string());
         for func in &ir_generator.funcs {
-            let stack_offset = func.sum_stack_offset();
+            let stack_size = func.stack_size;
             self.code.push(
-                ".intel_syntax noprefix\n.global main\nmain:\n  push rbp\n  mov rbp, rsp"
-                    .to_string(),
+                format!(".global {}\n{}:\n  push rbp\n  mov rbp, rsp", func.name, func.name)
             );
-            self.code.push(format!("  sub rsp, {}", stack_offset));
+            self.code.push(format!("  sub rsp, {}", stack_size));
             for ir in &func.ir_vec {
                 self.gen(ir);
             }
             self.code
-                .push((".Lreturn:\n  mov rsp, rbp\n  pop rbp\n  ret").to_string());
+                .push(format!(".Lreturn_{}:\n  mov rsp, rbp\n  pop rbp\n  ret\n", func.name));
         }
     }
 
@@ -38,10 +38,12 @@ impl Generator {
             IROp::Add | IROp::Sub | IROp::Mul | IROp::Div => self.gen_binary_operator(ir),
             IROp::Plus | IROp::Minus => self.gen_unary_operator(ir),
             IROp::BpOffset => self.gen_bprel(ir),
+            IROp::FuncCall(name) => self.gen_func_call(ir, name.to_string()),
             IROp::Load => self.gen_load(ir),
             IROp::Store => self.gen_store(ir),
             IROp::Cond => self.gen_cond(ir),
-            IROp::Label => self.gen_label(ir),
+            IROp::Label(label_name) => self.gen_label(ir, label_name.to_string()),
+            IROp::Jmp(label_name) => self.gen_jmp(label_name.to_string()),
             IROp::Return => self.gen_return(ir),
             IROp::Kill => (),
         }
@@ -107,6 +109,12 @@ impl Generator {
             .push(format!("  lea {}, [rbp-{}]", REGISTERS[reg_count], offset));
     }
 
+    fn gen_func_call(&mut self, ir: &IR, name: String) {
+        self.code.push(format!("  call {}", name));
+        let ret_reg = ir.lhs.unwrap();
+        self.code.push(format!("  mov {}, rax", REGISTERS[ret_reg]));
+    }
+
     /// Make sure the destination register has an address.
     fn gen_load(&mut self, ir: &IR) {
         let src_reg_count = ir.lhs.unwrap();
@@ -134,14 +142,20 @@ impl Generator {
         self.code.push(format!("  je .Lelse{}", label_number));
     }
 
-    fn gen_label(&mut self, ir: &IR) {
-        let label_number = ir.lhs.unwrap();
-        self.code.push(format!(".Lelse{}:", label_number));
+    fn gen_label(&mut self, ir: &IR, name: String) {
+        if let Some(label_number) = ir.lhs {
+            self.code.push(format!(".L{}{}:",name, label_number));
+        } else {
+            self.code.push(format!(".L{}:", name));
+        }
+    }
+
+    fn gen_jmp(&mut self, label_name: String) {
+        self.code.push(format!("  jmp .L{}", label_name));
     }
 
     fn gen_return(&mut self, ir: &IR) {
         self.code
             .push(format!("  mov rax, {}", REGISTERS[ir.lhs.unwrap()]));
-        self.code.push("  jmp .Lreturn".to_string());
     }
 }
