@@ -19,15 +19,18 @@ impl Generator {
         self.code.push(".intel_syntax noprefix\n".to_string());
         for func in &ir_generator.funcs {
             let stack_size = func.stack_size;
-            self.code.push(
-                format!(".global {}\n{}:\n  push rbp\n  mov rbp, rsp", func.name, func.name)
-            );
+            self.code.push(format!(
+                ".global {}\n{}:\n  push rbp\n  mov rbp, rsp",
+                func.name, func.name
+            ));
             self.code.push(format!("  sub rsp, {}", stack_size));
             for ir in &func.ir_vec {
                 self.gen(ir);
             }
-            self.code
-                .push(format!(".Lreturn_{}:\n  mov rsp, rbp\n  pop rbp\n  ret\n", func.name));
+            self.code.push(format!(
+                ".Lreturn_{}:\n  mov rsp, rbp\n  pop rbp\n  ret\n",
+                func.name
+            ));
         }
     }
 
@@ -109,10 +112,33 @@ impl Generator {
             .push(format!("  lea {}, [rbp-{}]", REGISTERS[reg_count], offset));
     }
 
+    /// Generate code to call a function.
     fn gen_func_call(&mut self, ir: &IR, name: String) {
+        self.save_registers(ir.lhs);
         self.code.push(format!("  call {}", name));
         let ret_reg = ir.lhs.unwrap();
         self.code.push(format!("  mov {}, rax", REGISTERS[ret_reg]));
+        self.restore_registers(ir.lhs);
+    }
+
+    /// Save used registers into a stack.
+    /// After register allocation, the register number in the function call IR
+    /// is the number of registers that need to saved.
+    fn save_registers(&mut self, reg_num: Option<usize>) {
+        if let Some(reg_num) = reg_num {
+            for i in 0..reg_num {
+                self.code.push(format!("  push {}", REGISTERS[i]));
+            }
+        }
+    }
+
+    /// Restore registers saved before function call from a stack.
+    fn restore_registers(&mut self, reg_num: Option<usize>) {
+        if let Some(reg_num) = reg_num {
+            for i in (0..reg_num).rev() {
+                self.code.push(format!("  pop {}", REGISTERS[i]));
+            }
+        }
     }
 
     /// Make sure the destination register has an address.
@@ -144,7 +170,7 @@ impl Generator {
 
     fn gen_label(&mut self, ir: &IR, name: String) {
         if let Some(label_number) = ir.lhs {
-            self.code.push(format!(".L{}{}:",name, label_number));
+            self.code.push(format!(".L{}{}:", name, label_number));
         } else {
             self.code.push(format!(".L{}:", name));
         }

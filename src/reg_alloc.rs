@@ -76,6 +76,30 @@ mod tests {
             ir_generator.funcs[0].ir_vec,
             vec![
                 IR::new(IROp::BpOffset, Some(0), Some(8)),
+                IR::new(IROp::Imm, Some(1), Some(4)),
+                IR::new(IROp::Store, Some(0), Some(1)),
+                IR::new(IROp::Kill, Some(0), None),
+                IR::new(IROp::Kill, Some(1), None),
+                IR::new(IROp::BpOffset, Some(0), Some(16)),
+                IR::new(IROp::Imm, Some(1), Some(2)),
+                IR::new(IROp::Store, Some(0), Some(1)),
+                IR::new(IROp::Kill, Some(0), None),
+                IR::new(IROp::Kill, Some(1), None),
+                IR::new(IROp::BpOffset, Some(0), Some(8)),
+                IR::new(IROp::Load, Some(0), Some(0)),
+                IR::new(IROp::BpOffset, Some(1), Some(16)),
+                IR::new(IROp::Load, Some(1), Some(1)),
+                IR::new(IROp::Add, Some(0), Some(1)),
+                IR::new(IROp::Kill, Some(1), None),
+                IR::new(IROp::Return, Some(0), None),
+                IR::new(IROp::Kill, Some(0), None),
+                IR::new(IROp::Jmp("return_f".to_string()), None, None),
+            ]
+        );
+        assert_eq!(
+            ir_generator.funcs[1].ir_vec,
+            vec![
+                IR::new(IROp::BpOffset, Some(0), Some(8)),
                 IR::new(IROp::Imm, Some(1), Some(3)),
                 IR::new(IROp::Store, Some(0), Some(1)),
                 IR::new(IROp::Kill, Some(0), None),
@@ -92,6 +116,9 @@ mod tests {
                 IR::new(IROp::Load, Some(2), Some(2)),
                 IR::new(IROp::Mul, Some(1), Some(2)),
                 IR::new(IROp::Kill, Some(2), None),
+                IR::new(IROp::FuncCall("f".to_string()), Some(2), None),
+                IR::new(IROp::Add, Some(1), Some(2)),
+                IR::new(IROp::Kill, Some(2), None),
                 IR::new(IROp::Store, Some(0), Some(1)),
                 IR::new(IROp::Kill, Some(0), None),
                 IR::new(IROp::Kill, Some(1), None),
@@ -99,6 +126,7 @@ mod tests {
                 IR::new(IROp::Load, Some(0), Some(0)),
                 IR::new(IROp::Return, Some(0), None),
                 IR::new(IROp::Kill, Some(0), None),
+                IR::new(IROp::Jmp("return_main".to_string()), None, None),
             ]
         );
         Ok(())
@@ -134,11 +162,13 @@ mod tests {
                 IR::new(IROp::Load, Some(2), Some(2)),
                 IR::new(IROp::Return, Some(2), None),
                 IR::new(IROp::Kill, Some(2), None),
-                IR::new(IROp::Label, Some(1), None),
+                IR::new(IROp::Jmp("return_main".to_string()), None, None),
+                IR::new(IROp::Label("else".to_string()), Some(1), None),
                 IR::new(IROp::BpOffset, Some(2), Some(8)),
                 IR::new(IROp::Load, Some(2), Some(2)),
                 IR::new(IROp::Return, Some(2), None),
                 IR::new(IROp::Kill, Some(2), None),
+                IR::new(IROp::Jmp("return_main".to_string()), None, None),
             ]
         );
         Ok(())
