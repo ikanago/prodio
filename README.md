@@ -17,6 +17,8 @@ Then return code is prompted as a result of the program.
 * arithmetical calculation
 * variable
 * `if` statement
+* define function
+* call function
 
 ## Compile Path🛠
 ```
