@@ -251,12 +251,7 @@ impl Function {
         self.kill(reg_flag);
 
         self.gen_expr(then);
-        let ir_label = IR::new(
-            IROp::Label("else".to_string()),
-            Some(self.label_number),
-            None,
-        );
-        self.ir_vec.push(ir_label);
+        self.gen_ir_label("else".to_string(), self.label_number);
         None
     }
 
@@ -280,8 +275,8 @@ impl Function {
         reg_lhs
     }
 
-    fn gen_ir_label(&mut self, name: String) -> Option<usize> {
-        let ir = IR::new(IROp::Label(name), None, None);
+    fn gen_ir_label(&mut self, name: String, label_number: usize) -> Option<usize> {
+        let ir = IR::new(IROp::Label(name), Some(label_number), None);
         self.ir_vec.push(ir);
         None
     }

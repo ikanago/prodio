@@ -52,6 +52,7 @@ impl<'a> Lexer<'a> {
                 b'{' => self.lex_lbrace(),
                 b'}' => self.lex_rbrace(),
                 b':' => self.lex_colon(),
+                b',' => self.lex_comma(),
                 b'0'..=b'9' => self.lex_number(),
                 b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_identifier(&keywords),
                 b';' => self.lex_semicolon(),
@@ -111,6 +112,11 @@ impl<'a> Lexer<'a> {
 
     fn lex_colon(&mut self) {
         self.tokens.push(token!(Colon, self.pos, self.pos + 1));
+        self.pos += 1;
+    }
+
+    fn lex_comma(&mut self) {
+        self.tokens.push(token!(Comma, self.pos, self.pos + 1));
         self.pos += 1;
     }
 
