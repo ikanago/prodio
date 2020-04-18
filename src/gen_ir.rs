@@ -68,19 +68,19 @@ impl Env {
 }
 
 /// Entry point to generate IR.
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct IRGenerator {
     pub funcs: Vec<Function>,
 }
 
 impl IRGenerator {
     pub fn new() -> Self {
-        IRGenerator { funcs: Vec::new() }
+        Default::default()
     }
 
     /// Iterates over a vector of AST whose root is a function definition
     /// and generate IR for each of them.
-    pub fn gen_ir(&mut self, asts: &Vec<Ast>) {
+    pub fn gen_ir(&mut self, asts: &[Ast]) {
         for ast in asts {
             let mut func = Function::new();
             func.gen_ir(ast);
@@ -97,7 +97,7 @@ impl IRGenerator {
 }
 
 /// Holds a result of IR generation from an AST.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Function {
     // Vector to store generated IRs.
     pub ir_vec: Vec<IR>,
@@ -115,14 +115,7 @@ pub struct Function {
 
 impl Function {
     pub fn new() -> Self {
-        Function {
-            ir_vec: Vec::new(),
-            env: VecDeque::new(),
-            name: String::new(),
-            reg_count: 0,
-            label_number: 0,
-            stack_size: 0,
-        }
+        Default::default()
     }
 
     /// Returns sum of stack size of the function.
@@ -162,7 +155,7 @@ impl Function {
         Some(self.reg_count)
     }
 
-    fn gen_ir_lval(&mut self, var_name: &String) -> Option<usize> {
+    fn gen_ir_lval(&mut self, var_name: &str) -> Option<usize> {
         let mut env_iter = self.env.iter_mut();
         // Because `Env` of inner scope is placed in the front of vector,
         // accessibility of local variables is controlled by iterating over vector from begining.
@@ -179,7 +172,7 @@ impl Function {
         reg_dst
     }
 
-    fn gen_ir_variable(&mut self, var_name: &String) -> Option<usize> {
+    fn gen_ir_variable(&mut self, var_name: &str) -> Option<usize> {
         let reg = self.gen_ir_lval(var_name);
         let ir = IR::new(IROp::Load, reg, reg);
         self.ir_vec.push(ir);
@@ -229,7 +222,7 @@ impl Function {
         node
     }
 
-    fn gen_ir_func(&mut self, name: &String, body: &Ast) -> Option<usize> {
+    fn gen_ir_func(&mut self, name: &str, body: &Ast) -> Option<usize> {
         self.name = name.to_string();
         self.gen_expr(body);
         None
@@ -255,7 +248,7 @@ impl Function {
         None
     }
 
-    fn gen_ir_comp_stmt(&mut self, stmts: &Vec<Ast>) -> Option<usize> {
+    fn gen_ir_comp_stmt(&mut self, stmts: &[Ast]) -> Option<usize> {
         self.env.push_front(Env::new());
         for stmt in stmts {
             self.gen_expr(stmt);

@@ -202,9 +202,8 @@ impl<'a> Parser<'a> {
         loop {
             let ast = self.parse_func_def()?;
             asts.push(ast);
-            match self.peek() {
-                Some(_) => continue,
-                None => break,
+            if self.peek().is_none() {
+                break;
             }
         }
         Ok(asts)
@@ -256,7 +255,7 @@ impl<'a> Parser<'a> {
             .ok_or(ParseError::Eof)
             .and_then(|token| match token.value {
                 TokenKind::Identifier(var) => {
-                    let lhs = Ast::new(AstKind::Variable(var.clone()), token.loc);
+                    let lhs = Ast::new(AstKind::Variable(var), token.loc);
                     self.expect_token(TokenKind::Colon)?;
                     self.expect_token(TokenKind::U64)?;
                     self.expect_token(TokenKind::Assignment)?;

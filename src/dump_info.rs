@@ -2,7 +2,7 @@ use crate::gen_ir::IRGenerator;
 use crate::parser::Ast;
 use crate::Token;
 
-pub fn dump_tokens(tokens: &Vec<Token>) {
+pub fn dump_tokens(tokens: &[Token]) {
     eprintln!("------DUMP TOKEN------");
     for token in tokens {
         eprintln!("{:?}, {:?}, {:?}", token.value, token.loc.0, token.loc.1);
@@ -10,7 +10,7 @@ pub fn dump_tokens(tokens: &Vec<Token>) {
     eprintln!();
 }
 
-pub fn dump_asts(asts: &Vec<Ast>) {
+pub fn dump_asts(asts: &[Ast]) {
     eprintln!("------DUMP AST------");
     for ast in asts {
         eprintln!("{:#?},", ast);

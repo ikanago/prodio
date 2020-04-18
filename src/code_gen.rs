@@ -4,14 +4,14 @@ use crate::REGISTER_COUNT;
 const REGISTERS: [&str; REGISTER_COUNT] = ["rbx", "r10", "r11", "r12", "r13", "r14", "r15"];
 
 /// Struct for retain generated code.
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Generator {
     pub code: Vec<String>,
 }
 
 impl Generator {
     pub fn new() -> Self {
-        Generator { code: Vec::new() }
+        Default::default()
     }
 
     /// Entry point of code generation.
@@ -126,8 +126,8 @@ impl Generator {
     /// is the number of registers that need to saved.
     fn save_registers(&mut self, reg_num: Option<usize>) {
         if let Some(reg_num) = reg_num {
-            for i in 0..reg_num {
-                self.code.push(format!("  push {}", REGISTERS[i]));
+            for register in REGISTERS.iter().take(reg_num) {
+                self.code.push(format!("  push {}", register));
             }
         }
     }
