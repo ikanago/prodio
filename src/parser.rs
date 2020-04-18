@@ -21,10 +21,11 @@ pub enum AstKind {
     },
     Func {
         name: String,
-        body: Vec<Ast>,
+        body: Box<Ast>,
     },
     FuncCall {
         name: String,
+        // params: Vec<
     },
     If {
         cond: Box<Ast>,
@@ -85,8 +86,14 @@ impl Ast {
         )
     }
 
-    pub fn func(name: String, body: Vec<Ast>, loc: Loc) -> Self {
-        Self::new(AstKind::Func { name, body }, loc)
+    pub fn func(name: String, body: Ast, loc: Loc) -> Self {
+        Self::new(
+            AstKind::Func {
+                name,
+                body: Box::new(body),
+            },
+            loc,
+        )
     }
 
     pub fn func_call(name: String, loc: Loc) -> Self {
@@ -184,7 +191,7 @@ impl<'a> Parser<'a> {
             if token.value == token_kind {
                 Ok(())
             } else {
-                Err(ParseError::NoSemicolon(token))
+                Err(ParseError::UnexpectedToken(token_kind, token))
             }
         })
     }
@@ -204,82 +211,40 @@ impl<'a> Parser<'a> {
     }
 
     /// BNF:
-    ///     FUNC_DEF ::= "func" IDENTIFIER "(" ")" "{" STMT* "}"
+    ///     FUNC_DEF ::= "func" IDENTIFIER "(" ")" COMP_STMT
     pub fn parse_func_def(&mut self) -> Result<Ast, ParseError> {
         self.expect_token(TokenKind::Func)?;
-        let name = self
+        let func_name = self
             .next()
             .ok_or(ParseError::Eof)
             .and_then(|token| match token.value {
                 TokenKind::Identifier(name) => Ok(name),
-                _ => Err(ParseError::UnexpectedToken(token)),
+                _ => Err(ParseError::UnexpectedToken(
+                    TokenKind::Identifier("func".to_string()),
+                    token,
+                )),
             })?;
 
         self.expect_token(TokenKind::LParen)?;
         self.expect_token(TokenKind::RParen)?;
-        self.expect_token(TokenKind::LBrace)?;
-        let mut body = vec![];
-        let mut loc = Loc(std::usize::MAX, 0);
-        while self.peek().map(|token| &token.value) != Some(&TokenKind::RBrace) {
-            let stmt = self.parse_stmt()?;
-            loc = loc.merge(&stmt.loc);
-            body.push(stmt);
-        }
-        self.next();
-        Ok(Ast::func(name, body, loc))
+        let body = self.parse_comp_stmt()?;
+        let loc = body.loc.clone();
+        Ok(Ast::func(func_name, body, loc))
     }
 
     /// BNF:
-    ///     STMT ::= ASSIGN | DECL_VAR | "if" COMP_STMT | COMP_STMT | "return" ASSIGN
+    ///     STMT ::= DECL_VAR | IF_STMT | COMP_STMT | RETURN_STMT | ASSIGN ";"
     fn parse_stmt(&mut self) -> Result<Ast, ParseError> {
         match self.peek().map(|token| &token.value) {
             Some(TokenKind::Let) => self.parse_decl_var(),
-            Some(TokenKind::If) => {
-                self.next();
-                let cond = self.parse_assign()?;
-                let then = self.parse_stmt()?;
-                let loc = cond.loc.merge(&then.loc);
-                Ok(Ast::if_stmt(cond, then, None, loc))
-            }
-            Some(TokenKind::LBrace) => {
-                self.next();
-                let mut stmts = Vec::new();
-                let mut loc = Loc(std::usize::MAX, 0);
-                while self.peek().map(|token| &token.value) != Some(&TokenKind::RBrace) {
-                    let stmt = self.parse_stmt()?;
-                    loc = loc.merge(&stmt.loc);
-                    stmts.push(stmt);
-                }
-                self.next();
-                Ok(Ast::comp_stmt(stmts, loc))
-            }
-            Some(TokenKind::Return) => {
-                self.next();
-                let expr = self.parse_assign()?;
-                let loc = expr.loc.clone();
-                self.expect_token(TokenKind::Semicolon)?;
-                Ok(Ast::return_stmt(expr, loc))
-            }
+            Some(TokenKind::If) => self.parse_if(),
+            Some(TokenKind::LBrace) => self.parse_comp_stmt(),
+            Some(TokenKind::Return) => self.parse_return(),
             _ => {
                 let ast = self.parse_assign()?;
                 self.expect_token(TokenKind::Semicolon)?;
                 Ok(ast)
             }
-        }
-    }
-
-    /// BNF:
-    ///     ASSIGN ::= ADD ("=" ASSIGN)?
-    fn parse_assign(&mut self) -> Result<Ast, ParseError> {
-        let lhs = self.parse_add()?;
-        match self.peek().map(|token| &token.value) {
-            Some(TokenKind::Assignment) => {
-                self.next();
-                let rhs = self.parse_assign()?;
-                let loc = lhs.loc.merge(&rhs.loc);
-                Ok(Ast::assignment(lhs, rhs, loc))
-            }
-            _ => Ok(lhs),
         }
     }
 
@@ -306,8 +271,61 @@ impl<'a> Parser<'a> {
                         loc,
                     ))
                 }
-                _ => Err(ParseError::UnexpectedToken(token.clone())),
+                _ => Err(ParseError::UnexpectedToken(
+                    TokenKind::Identifier("variable".to_string()),
+                    token.clone(),
+                )),
             })
+    }
+
+    ///BNF:
+    ///    IF_STMT ::= "if" ASSIGN COMP_STMT
+    fn parse_if(&mut self) -> Result<Ast, ParseError> {
+        self.next();
+        let cond = self.parse_assign()?;
+        let then = self.parse_comp_stmt()?;
+        let loc = cond.loc.merge(&then.loc);
+        Ok(Ast::if_stmt(cond, then, None, loc))
+    }
+
+    /// BNF:
+    ///     COMP_STMT ::= "{" STMT* "}"
+    fn parse_comp_stmt(&mut self) -> Result<Ast, ParseError> {
+        self.expect_token(TokenKind::LBrace)?;
+        let mut vec_stmt = Vec::new();
+        let mut loc = Loc(std::usize::MAX, 0);
+        while self.peek().map(|token| &token.value) != Some(&TokenKind::RBrace) {
+            let stmt = self.parse_stmt()?;
+            loc = loc.merge(&stmt.loc);
+            vec_stmt.push(stmt);
+        }
+        self.next();
+        Ok(Ast::comp_stmt(vec_stmt, loc))
+    }
+
+    /// BNF:
+    ///     "return" ASSIGN ";"
+    fn parse_return(&mut self) -> Result<Ast, ParseError> {
+        self.next();
+        let expr = self.parse_assign()?;
+        let loc = expr.loc.clone();
+        self.expect_token(TokenKind::Semicolon)?;
+        Ok(Ast::return_stmt(expr, loc))
+    }
+
+    /// BNF:
+    ///     ASSIGN ::= ADD ("=" ASSIGN)?
+    fn parse_assign(&mut self) -> Result<Ast, ParseError> {
+        let lhs = self.parse_add()?;
+        match self.peek().map(|token| &token.value) {
+            Some(TokenKind::Assignment) => {
+                self.next();
+                let rhs = self.parse_assign()?;
+                let loc = lhs.loc.merge(&rhs.loc);
+                Ok(Ast::assignment(lhs, rhs, loc))
+            }
+            _ => Ok(lhs),
+        }
     }
 
     /// BNF:
@@ -376,7 +394,7 @@ impl<'a> Parser<'a> {
     }
 
     /// BNF:
-    ///     PRIMARY ::= DIGIT* | IDENTIFIER | IDENTIFIER "(" ")" | "(" ASSIGN ")"
+    ///     PRIMARY ::= DIGIT* | IDENTIFIER | IDENTIFIER "(" params? ")" | "(" ASSIGN ")"
     ///     DIGIT  ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
     fn parse_primary(&mut self) -> Result<Ast, ParseError> {
         self.next()

@@ -229,9 +229,9 @@ impl Function {
         node
     }
 
-    fn gen_ir_func(&mut self, name: &String, body: &Vec<Ast>) -> Option<usize> {
+    fn gen_ir_func(&mut self, name: &String, body: &Ast) -> Option<usize> {
         self.name = name.to_string();
-        self.gen_ir_comp_stmt(body);
+        self.gen_expr(body);
         None
     }
 

@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::{Token, TokenKind};
 use std::fmt;
 
 /// Struct to have location of code.
@@ -67,7 +67,7 @@ impl fmt::Display for LexError {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParseError {
-    UnexpectedToken(Token),
+    UnexpectedToken(TokenKind, Token),
     NotExpression(Token),
     NotOperator(Token),
     UnclosedOpenParen(Token),
@@ -79,8 +79,8 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseError::UnexpectedToken(t) => {
-                write!(f, "{}: Unexpected token '{}'", t.loc, t.value)
+            ParseError::UnexpectedToken(expected, actual) => {
+                write!(f, "{}: Unexpected token '{}', expected {}", actual.loc, actual.value, expected)
             }
             ParseError::NotExpression(t) => write!(f, "{}: Not expression '{}'", t.loc, t.value),
             ParseError::NotOperator(t) => write!(f, "{}: Not operator '{}'", t.loc, t.value),
