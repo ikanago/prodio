@@ -139,7 +139,7 @@ impl Function {
             Decl { lhs, rhs } => self.gen_ir_decl_var(lhs, rhs),
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
-            Func { name, body } => self.gen_ir_func(name, body),
+            Func { name, params, body } => self.gen_ir_func(name, params, body),
             FuncCall { name } => self.gen_ir_func_call(name.to_string()),
             If { cond, then, els } => self.gen_ir_if(cond, then, els),
             CompStmt { stmts } => self.gen_ir_comp_stmt(stmts),
@@ -222,7 +222,7 @@ impl Function {
         node
     }
 
-    fn gen_ir_func(&mut self, name: &str, body: &Ast) -> Option<usize> {
+    fn gen_ir_func(&mut self, name: &str, params: &Vec<Ast>, body: &Ast) -> Option<usize> {
         self.name = name.to_string();
         self.gen_expr(body);
         None

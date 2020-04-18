@@ -21,6 +21,7 @@ pub enum AstKind {
     },
     Func {
         name: String,
+        params: Vec<Ast>,
         body: Box<Ast>,
     },
     FuncCall {
@@ -86,10 +87,11 @@ impl Ast {
         )
     }
 
-    pub fn func(name: String, body: Ast, loc: Loc) -> Self {
+    pub fn func(name: String, params: Vec<Ast>, body: Ast, loc: Loc) -> Self {
         Self::new(
             AstKind::Func {
                 name,
+                params,
                 body: Box::new(body),
             },
             loc,
@@ -210,8 +212,8 @@ impl<'a> Parser<'a> {
     }
 
     /// BNF:
-    ///     FUNC_DEF ::= "func" IDENTIFIER "(" ")" COMP_STMT
-    pub fn parse_func_def(&mut self) -> Result<Ast, ParseError> {
+    ///     FUNC_DEF ::= "func" IDENTIFIER "(" PARAMS ")" COMP_STMT
+    fn parse_func_def(&mut self) -> Result<Ast, ParseError> {
         self.expect_token(TokenKind::Func)?;
         let func_name = self
             .next()
@@ -224,11 +226,46 @@ impl<'a> Parser<'a> {
                 )),
             })?;
 
-        self.expect_token(TokenKind::LParen)?;
-        self.expect_token(TokenKind::RParen)?;
+        let params = self.parse_params()?;
         let body = self.parse_comp_stmt()?;
         let loc = body.loc.clone();
-        Ok(Ast::func(func_name, body, loc))
+        Ok(Ast::func(func_name, params, body, loc))
+    }
+
+    /// BNF:
+    ///     PARAMS ::= PARAM*
+    fn parse_params(&mut self) -> Result<Vec<Ast>, ParseError> {
+        self.expect_token(TokenKind::LParen)?;
+        let mut vec_param: Vec<Ast> = Vec::new();
+        // Todo: more simple way to extract `TokenKind`
+        if let Some(TokenKind::RParen) = self.peek().map(|token| &token.value) {
+            self.next();
+            return Ok(vec_param);
+        }
+
+        vec_param.push(self.parse_param()?);
+        while self.peek().map(|token| &token.value) == Some(&TokenKind::Comma) {
+            self.next();
+            vec_param.push(self.parse_param()?);
+        }
+        self.expect_token(TokenKind::RParen)?;
+        Ok(vec_param)
+    }
+
+    fn parse_param(&mut self) -> Result<Ast, ParseError> {
+        self.next()
+            .ok_or(ParseError::Eof)
+            .and_then(|token| match token.value {
+                TokenKind::Identifier(var) => {
+                    self.expect_token(TokenKind::Colon)?;
+                    self.expect_token(TokenKind::U64)?;
+                    Ok(Ast::new(AstKind::Variable(var), token.loc))
+                }
+                _ => Err(ParseError::UnexpectedToken(
+                    TokenKind::Identifier("variable".to_string()),
+                    token.clone(),
+                )),
+            })
     }
 
     /// BNF:
@@ -248,7 +285,8 @@ impl<'a> Parser<'a> {
     }
 
     /// BNF:
-    ///     DECL_VAR ::= TYPE VARIABLE "=" ADD
+    ///     DECL_VAR ::= "let" VARIABLE ":" TYPE "=" ADD
+    ///     TYPE     ::= "u64"
     fn parse_decl_var(&mut self) -> Result<Ast, ParseError> {
         self.next();
         self.next()
