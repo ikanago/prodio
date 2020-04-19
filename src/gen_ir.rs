@@ -140,7 +140,7 @@ impl Function {
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
             Func { name, params, body } => self.gen_ir_func(name, params, body),
-            FuncCall { name } => self.gen_ir_func_call(name.to_string()),
+            FuncCall { name, args } => self.gen_ir_func_call(name.to_string()),
             If { cond, then, els } => self.gen_ir_if(cond, then, els),
             CompStmt { stmts } => self.gen_ir_comp_stmt(stmts),
             Assignment { lhs, rhs } => self.gen_ir_assignment(lhs, rhs),

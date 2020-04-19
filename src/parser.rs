@@ -26,7 +26,7 @@ pub enum AstKind {
     },
     FuncCall {
         name: String,
-        // params: Vec<
+        args: Vec<Ast>,
     },
     If {
         cond: Box<Ast>,
@@ -98,8 +98,8 @@ impl Ast {
         )
     }
 
-    pub fn func_call(name: String, loc: Loc) -> Self {
-        Self::new(AstKind::FuncCall { name }, loc)
+    pub fn func_call(name: String, args: Vec<Ast>, loc: Loc) -> Self {
+        Self::new(AstKind::FuncCall { name, args }, loc)
     }
 
     pub fn if_stmt(cond: Ast, then: Ast, els: Option<Ast>, loc: Loc) -> Self {
@@ -431,7 +431,7 @@ impl<'a> Parser<'a> {
     }
 
     /// BNF:
-    ///     PRIMARY ::= DIGIT* | IDENTIFIER | IDENTIFIER "(" params? ")" | "(" ASSIGN ")"
+    ///     PRIMARY ::= DIGIT* | IDENTIFIER | IDENTIFIER "(" ASSIGN? ")" | "(" ASSIGN ")"
     ///     DIGIT  ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
     fn parse_primary(&mut self) -> Result<Ast, ParseError> {
         self.next()
@@ -442,9 +442,18 @@ impl<'a> Parser<'a> {
                     // Function call.
                     if self.peek() == Some(&TokenKind::LParen) {
                         self.next();
-                        let node = Ast::func_call(var, token.loc);
+                        let mut args = Vec::new();
+                        if self.peek() == Some(&TokenKind::RParen) {
+                            return Ok(Ast::func_call(var, args, token.loc));
+                        }
+
+                        args.push(self.parse_assign()?);
+                        while self.peek() == Some(&TokenKind::Comma) {
+                            self.next();
+                            args.push(self.parse_assign()?);
+                        }
                         self.expect_token(TokenKind::RParen)?;
-                        Ok(node)
+                        Ok(Ast::func_call(var, args, token.loc))
                     }
                     // Access to local variable.
                     else {
