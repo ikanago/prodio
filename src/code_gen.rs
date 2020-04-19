@@ -18,12 +18,11 @@ impl Generator {
     pub fn code_gen(&mut self, ir_generator: &IRGenerator) {
         self.code.push(".intel_syntax noprefix\n".to_string());
         for func in &ir_generator.funcs {
-            let stack_size = func.stack_size;
             self.code.push(format!(
                 ".global {}\n{}:\n  push rbp\n  mov rbp, rsp",
                 func.name, func.name
             ));
-            self.code.push(format!("  sub rsp, {}", stack_size));
+            self.code.push(format!("  sub rsp, {}", func.stack_size));
             for ir in &func.ir_vec {
                 self.gen(ir);
             }

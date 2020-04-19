@@ -169,12 +169,12 @@ impl<'a> Parser<'a> {
         Parser { tokens, pos: 0 }
     }
 
-    /// Take a look at a following token.
-    fn peek(&self) -> Option<&Token> {
+    /// Take a look at a next token and return its kind.
+    fn peek(&self) -> Option<&TokenKind> {
         if self.tokens.len() == self.pos {
             return None;
         }
-        Some(&self.tokens[self.pos])
+        Some(&self.tokens[self.pos].value)
     }
 
     /// Return current token and move `pos` forward.
@@ -238,13 +238,13 @@ impl<'a> Parser<'a> {
         self.expect_token(TokenKind::LParen)?;
         let mut vec_param: Vec<Ast> = Vec::new();
         // Todo: more simple way to extract `TokenKind`
-        if let Some(TokenKind::RParen) = self.peek().map(|token| &token.value) {
+        if self.peek() == Some(&TokenKind::RParen) {
             self.next();
             return Ok(vec_param);
         }
 
         vec_param.push(self.parse_param()?);
-        while self.peek().map(|token| &token.value) == Some(&TokenKind::Comma) {
+        while self.peek() == Some(&TokenKind::Comma) {
             self.next();
             vec_param.push(self.parse_param()?);
         }
@@ -271,11 +271,11 @@ impl<'a> Parser<'a> {
     /// BNF:
     ///     STMT ::= DECL_VAR | IF_STMT | COMP_STMT | RETURN_STMT | ASSIGN ";"
     fn parse_stmt(&mut self) -> Result<Ast, ParseError> {
-        match self.peek().map(|token| &token.value) {
-            Some(TokenKind::Let) => self.parse_decl_var(),
-            Some(TokenKind::If) => self.parse_if(),
-            Some(TokenKind::LBrace) => self.parse_comp_stmt(),
-            Some(TokenKind::Return) => self.parse_return(),
+        match self.peek() {
+            Some(&TokenKind::Let) => self.parse_decl_var(),
+            Some(&TokenKind::If) => self.parse_if(),
+            Some(&TokenKind::LBrace) => self.parse_comp_stmt(),
+            Some(&TokenKind::Return) => self.parse_return(),
             _ => {
                 let ast = self.parse_assign()?;
                 self.expect_token(TokenKind::Semicolon)?;
@@ -331,7 +331,7 @@ impl<'a> Parser<'a> {
         self.expect_token(TokenKind::LBrace)?;
         let mut vec_stmt = Vec::new();
         let mut loc = Loc(std::usize::MAX, 0);
-        while self.peek().map(|token| &token.value) != Some(&TokenKind::RBrace) {
+        while self.peek() != Some(&TokenKind::RBrace) {
             let stmt = self.parse_stmt()?;
             loc = loc.merge(&stmt.loc);
             vec_stmt.push(stmt);
@@ -354,8 +354,8 @@ impl<'a> Parser<'a> {
     ///     ASSIGN ::= ADD ("=" ASSIGN)?
     fn parse_assign(&mut self) -> Result<Ast, ParseError> {
         let lhs = self.parse_add()?;
-        match self.peek().map(|token| &token.value) {
-            Some(TokenKind::Assignment) => {
+        match self.peek() {
+            Some(&TokenKind::Assignment) => {
                 self.next();
                 let rhs = self.parse_assign()?;
                 let loc = lhs.loc.merge(&rhs.loc);
@@ -370,12 +370,12 @@ impl<'a> Parser<'a> {
     fn parse_add(&mut self) -> Result<Ast, ParseError> {
         let mut lhs = self.parse_mul()?;
         loop {
-            if let Some(TokenKind::Plus) = self.peek().map(|token| &token.value) {
+            if self.peek() == Some(&TokenKind::Plus) {
                 self.next();
                 let rhs = self.parse_mul()?;
                 let loc = lhs.loc.merge(&rhs.loc);
                 lhs = Ast::binop(BinOpKind::Add, lhs, rhs, loc);
-            } else if let Some(TokenKind::Minus) = self.peek().map(|token| &token.value) {
+            } else if self.peek() == Some(&TokenKind::Minus) {
                 self.next();
                 let rhs = self.parse_mul()?;
                 let loc = lhs.loc.merge(&rhs.loc);
@@ -393,12 +393,12 @@ impl<'a> Parser<'a> {
     fn parse_mul(&mut self) -> Result<Ast, ParseError> {
         let mut lhs = self.parse_unary()?;
         loop {
-            if let Some(TokenKind::Asterisk) = self.peek().map(|token| &token.value) {
+            if self.peek() == Some(&TokenKind::Asterisk) {
                 self.next();
                 let rhs = self.parse_unary()?;
                 let loc = lhs.loc.merge(&rhs.loc);
                 lhs = Ast::binop(BinOpKind::Mul, lhs, rhs, loc);
-            } else if let Some(TokenKind::Slash) = self.peek().map(|token| &token.value) {
+            } else if self.peek() == Some(&TokenKind::Slash) {
                 self.next();
                 let rhs = self.parse_unary()?;
                 let loc = lhs.loc.merge(&rhs.loc);
@@ -413,8 +413,8 @@ impl<'a> Parser<'a> {
     /// BNF:
     ///     UNARY ::= ("+" | "-") PRIMARY | PRIMARY
     fn parse_unary(&mut self) -> Result<Ast, ParseError> {
-        match self.peek().map(|token| &token.value) {
-            Some(TokenKind::Minus) => {
+        match self.peek() {
+            Some(&TokenKind::Minus) => {
                 let op = match self.next() {
                     Some(Token {
                         value: TokenKind::Minus,
@@ -440,7 +440,7 @@ impl<'a> Parser<'a> {
                 TokenKind::Number(n) => Ok(Ast::new(AstKind::Num(n), token.loc)),
                 TokenKind::Identifier(var) => {
                     // Function call.
-                    if let Some(TokenKind::LParen) = self.peek().map(|t| &t.value) {
+                    if self.peek() == Some(&TokenKind::LParen) {
                         self.next();
                         let node = Ast::func_call(var, token.loc);
                         self.expect_token(TokenKind::RParen)?;
