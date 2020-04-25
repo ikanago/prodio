@@ -17,9 +17,10 @@ pub enum IROp {
     BpOffset, // Load variable offset from $rbp.
     FuncCall(String),
     Load,
+    LoadParam,
     Store,
+    StoreArg,
     Cond,
-
     Label(String),
     Jmp(String),
     Return,
@@ -43,7 +44,7 @@ impl IR {
     }
 }
 
-/// Struct to contain pairs of variables and offset values from rbp.
+/// Struct to contain pairs of variables and offset from rbp in the scope.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Env {
     // Mapping variable name to offset.
@@ -53,10 +54,10 @@ pub struct Env {
 }
 
 impl Env {
-    fn new() -> Self {
+    fn new(current_var_offset: usize) -> Self {
         Env {
             local_var_map: HashMap::new(),
-            current_var_offset: 0,
+            current_var_offset,
         }
     }
 
@@ -101,7 +102,7 @@ impl IRGenerator {
 pub struct Function {
     // Vector to store generated IRs.
     pub ir_vec: Vec<IR>,
-    // Vector of `Env`.
+    // Vector of `Env`. Environment of the inner scope places front.
     pub env: VecDeque<Env>,
     // Function name.
     pub name: String,
@@ -140,7 +141,7 @@ impl Function {
             BinOp { op, lhs, rhs } => self.gen_ir_binary_operator(op.clone(), lhs, rhs),
             UniOp { op, node } => self.gen_ir_unary_operator(op.clone(), node),
             Func { name, params, body } => self.gen_ir_func(name, params, body),
-            FuncCall { name, args } => self.gen_ir_func_call(name.to_string()),
+            FuncCall { name, args } => self.gen_ir_func_call(name.to_string(), args),
             If { cond, then, els } => self.gen_ir_if(cond, then, els),
             CompStmt { stmts } => self.gen_ir_comp_stmt(stmts),
             Assignment { lhs, rhs } => self.gen_ir_assignment(lhs, rhs),
@@ -214,7 +215,6 @@ impl Function {
 
     fn gen_ir_unary_operator(&mut self, op: UniOpKind, node: &Ast) -> Option<usize> {
         let node = self.gen_expr(node);
-
         let ir = match op {
             UniOpKind::Minus => IR::new(IROp::Minus, node, None),
         };
@@ -224,15 +224,48 @@ impl Function {
 
     fn gen_ir_func(&mut self, name: &str, params: &Vec<Ast>, body: &Ast) -> Option<usize> {
         self.name = name.to_string();
+        self.env.push_front(Env::new(0));
+        for (i, param) in params.iter().enumerate() {
+            self.gen_ir_func_param(i, param);
+        }
         self.gen_expr(body);
         None
     }
 
-    fn gen_ir_func_call(&mut self, name: String) -> Option<usize> {
+    fn gen_ir_func_param(&mut self, param_reg_num: usize, param: &Ast) -> Option<usize> {
+        let var_name = ident_val!(&param.value);
+        let env = self.env.front_mut().unwrap();
+        env.add(var_name, 8);
+
+        self.reg_count += 1;
+        let reg_lhs = Some(self.reg_count);
+        self.ir_vec.push(IR::new(
+            IROp::BpOffset,
+            reg_lhs,
+            Some(env.current_var_offset),
+        ));
+        self.ir_vec
+            .push(IR::new(IROp::LoadParam, Some(param_reg_num), reg_lhs));
+        self.kill(reg_lhs);
+        None
+    }
+
+    fn gen_ir_func_call(&mut self, name: String, args: &Vec<Ast>) -> Option<usize> {
+        let mut reg_args = [None; 6];
+        for (i, arg) in args.iter().enumerate() {
+            let reg_arg = self.gen_expr(arg);
+            reg_args[i] = reg_arg;
+            self.ir_vec.push(IR::new(IROp::StoreArg, Some(i), reg_arg));
+        }
         self.reg_count += 1;
         let reg = Some(self.reg_count);
         let ir = IR::new(IROp::FuncCall(name), reg, None);
         self.ir_vec.push(ir);
+        for reg_arg in reg_args.iter() {
+            if reg_arg.is_some() {
+                self.kill(*reg_arg);
+            }
+        }
         reg
     }
 
@@ -249,7 +282,8 @@ impl Function {
     }
 
     fn gen_ir_comp_stmt(&mut self, stmts: &[Ast]) -> Option<usize> {
-        self.env.push_front(Env::new());
+        let sum_of_outer_scope_offset = self.env.front().unwrap().current_var_offset;
+        self.env.push_front(Env::new(sum_of_outer_scope_offset));
         for stmt in stmts {
             self.gen_expr(stmt);
         }
@@ -314,23 +348,37 @@ mod tests {
             ir_generator.funcs[0].ir_vec,
             vec![
                 IR::new(IROp::BpOffset, Some(1), Some(8)),
-                IR::new(IROp::Imm, Some(2), Some(4)),
-                IR::new(IROp::Store, Some(1), Some(2)),
+                IR::new(IROp::LoadParam, Some(0), Some(1)),
                 IR::new(IROp::Kill, Some(1), None),
+                IR::new(IROp::BpOffset, Some(2), Some(16)),
+                IR::new(IROp::LoadParam, Some(1), Some(2)),
                 IR::new(IROp::Kill, Some(2), None),
-                IR::new(IROp::BpOffset, Some(3), Some(16)),
-                IR::new(IROp::Imm, Some(4), Some(2)),
+                IR::new(IROp::BpOffset, Some(3), Some(24)),
+                IR::new(IROp::Imm, Some(4), Some(4)),
                 IR::new(IROp::Store, Some(3), Some(4)),
                 IR::new(IROp::Kill, Some(3), None),
                 IR::new(IROp::Kill, Some(4), None),
-                IR::new(IROp::BpOffset, Some(5), Some(8)),
-                IR::new(IROp::Load, Some(5), Some(5)),
-                IR::new(IROp::BpOffset, Some(6), Some(16)),
-                IR::new(IROp::Load, Some(6), Some(6)),
-                IR::new(IROp::Add, Some(5), Some(6)),
-                IR::new(IROp::Kill, Some(6), None),
-                IR::new(IROp::Return, Some(5), None),
+                IR::new(IROp::BpOffset, Some(5), Some(32)),
+                IR::new(IROp::Imm, Some(6), Some(2)),
+                IR::new(IROp::Store, Some(5), Some(6)),
                 IR::new(IROp::Kill, Some(5), None),
+                IR::new(IROp::Kill, Some(6), None),
+                IR::new(IROp::BpOffset, Some(7), Some(8)),
+                IR::new(IROp::Load, Some(7), Some(7)),
+                IR::new(IROp::BpOffset, Some(8), Some(24)),
+                IR::new(IROp::Load, Some(8), Some(8)),
+                IR::new(IROp::Mul, Some(7), Some(8)),
+                IR::new(IROp::Kill, Some(8), None),
+                IR::new(IROp::BpOffset, Some(9), Some(16)),
+                IR::new(IROp::Load, Some(9), Some(9)),
+                IR::new(IROp::BpOffset, Some(10), Some(32)),
+                IR::new(IROp::Load, Some(10), Some(10)),
+                IR::new(IROp::Mul, Some(9), Some(10)),
+                IR::new(IROp::Kill, Some(10), None),
+                IR::new(IROp::Add, Some(7), Some(9)),
+                IR::new(IROp::Kill, Some(9), None),
+                IR::new(IROp::Return, Some(7), None),
+                IR::new(IROp::Kill, Some(7), None),
                 IR::new(IROp::Jmp("return_f".to_string()), None, None),
             ]
         );
@@ -350,16 +398,16 @@ mod tests {
                 IR::new(IROp::BpOffset, Some(5), Some(24)),
                 IR::new(IROp::BpOffset, Some(6), Some(8)),
                 IR::new(IROp::Load, Some(6), Some(6)),
+                IR::new(IROp::StoreArg, Some(0), Some(6)),
                 IR::new(IROp::BpOffset, Some(7), Some(16)),
                 IR::new(IROp::Load, Some(7), Some(7)),
-                IR::new(IROp::Mul, Some(6), Some(7)),
-                IR::new(IROp::Kill, Some(7), None),
+                IR::new(IROp::StoreArg, Some(1), Some(7)),
                 IR::new(IROp::FuncCall("f".to_string()), Some(8), None),
-                IR::new(IROp::Add, Some(6), Some(8)),
-                IR::new(IROp::Kill, Some(8), None),
-                IR::new(IROp::Store, Some(5), Some(6)),
-                IR::new(IROp::Kill, Some(5), None),
                 IR::new(IROp::Kill, Some(6), None),
+                IR::new(IROp::Kill, Some(7), None),
+                IR::new(IROp::Store, Some(5), Some(8)),
+                IR::new(IROp::Kill, Some(5), None),
+                IR::new(IROp::Kill, Some(8), None),
                 IR::new(IROp::BpOffset, Some(9), Some(24)),
                 IR::new(IROp::Load, Some(9), Some(9)),
                 IR::new(IROp::Return, Some(9), None),

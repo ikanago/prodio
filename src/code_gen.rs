@@ -1,7 +1,9 @@
 use crate::gen_ir::{IRGenerator, IROp, IR};
+use crate::ARG_REGISTER_COUNT;
 use crate::REGISTER_COUNT;
 
 const REGISTERS: [&str; REGISTER_COUNT] = ["rbx", "r10", "r11", "r12", "r13", "r14", "r15"];
+const ARG_REGISTERS: [&str; ARG_REGISTER_COUNT] = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
 
 /// Struct for retain generated code.
 #[derive(Debug, Default, Clone)]
@@ -42,7 +44,9 @@ impl Generator {
             IROp::BpOffset => self.gen_bprel(ir),
             IROp::FuncCall(name) => self.gen_func_call(ir, name.to_string()),
             IROp::Load => self.gen_load(ir),
+            IROp::LoadParam => self.gen_load_param(ir),
             IROp::Store => self.gen_store(ir),
+            IROp::StoreArg => self.gen_store_arg(ir),
             IROp::Cond => self.gen_cond(ir),
             IROp::Label(label_name) => self.gen_label(ir, label_name.to_string()),
             IROp::Jmp(label_name) => self.gen_jmp(label_name.to_string()),
@@ -142,21 +146,35 @@ impl Generator {
 
     /// Make sure the destination register has an address.
     fn gen_load(&mut self, ir: &IR) {
-        let src_reg_count = ir.lhs.unwrap();
-        let dst_reg_count = ir.rhs.unwrap();
         self.code.push(format!(
             "  mov {}, [{}]",
-            REGISTERS[src_reg_count], REGISTERS[dst_reg_count]
+            REGISTERS[ir.rhs.unwrap()], REGISTERS[ir.lhs.unwrap()]
+        ));
+    }
+
+    /// Source register: Register to pass an argument(lhs)
+    /// Destination register: Register which contains an address of a result of evaled an argument(rhs)
+    fn gen_load_param (&mut self, ir : &IR) {
+        self.code.push(format!(
+            "  mov [{}], {}",
+            REGISTERS[ir.rhs.unwrap()], ARG_REGISTERS[ir.lhs.unwrap()]
         ));
     }
 
     /// Make sure the source register has an address.
     fn gen_store(&mut self, ir: &IR) {
-        let dst_reg_count = ir.lhs.unwrap();
-        let src_reg_count = ir.rhs.unwrap();
         self.code.push(format!(
             "  mov [{}], {}",
-            REGISTERS[dst_reg_count], REGISTERS[src_reg_count]
+            REGISTERS[ir.lhs.unwrap()], REGISTERS[ir.rhs.unwrap()]
+        ));
+    }
+
+    /// Source register: Register which contains a result of evaled an argument(rhs)
+    /// Destination register: Register to pass an argument(lhs)
+    fn gen_store_arg(&mut self, ir: &IR) {
+        self.code.push(format!(
+            "  mov {}, {}",
+            ARG_REGISTERS[ir.lhs.unwrap()], REGISTERS[ir.rhs.unwrap()]
         ));
     }
 

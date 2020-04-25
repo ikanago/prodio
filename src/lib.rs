@@ -15,6 +15,7 @@ use std::io::Read;
 use crate::util::Annotation;
 
 const REGISTER_COUNT: usize = 7;
+const ARG_REGISTER_COUNT: usize = 6;
 
 pub fn read_file_content<P: AsRef<std::path::Path>>(
     source_file_path: P,

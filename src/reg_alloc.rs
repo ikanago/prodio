@@ -16,6 +16,9 @@ impl Function {
                 IROp::Imm | IROp::BpOffset | IROp::Cond | IROp::Return | IROp::FuncCall(_) => {
                     ir.lhs = Function::alloc(ir.lhs, &mut is_reg_used, &mut reg_map)
                 }
+                IROp::LoadParam | IROp::StoreArg => {
+                    ir.rhs = Function::alloc(ir.rhs, &mut is_reg_used, &mut reg_map);
+                }
                 IROp::Add | IROp::Sub | IROp::Mul | IROp::Div | IROp::Store | IROp::Load => {
                     ir.lhs = Function::alloc(ir.lhs, &mut is_reg_used, &mut reg_map);
                     ir.rhs = Function::alloc(ir.rhs, &mut is_reg_used, &mut reg_map);
@@ -35,7 +38,7 @@ impl Function {
         is_reg_used: &mut [bool],
         reg_map: &mut HashMap<usize, usize>,
     ) -> Option<usize> {
-        let ir_reg = ir_reg.unwrap();
+        let ir_reg = ir_reg.expect(&format!("{:?}", ir_reg));
         if let Some(real_reg) = reg_map.get(&ir_reg) {
             return Some(*real_reg);
         }
@@ -76,19 +79,33 @@ mod tests {
             ir_generator.funcs[0].ir_vec,
             vec![
                 IR::new(IROp::BpOffset, Some(0), Some(8)),
+                IR::new(IROp::LoadParam, Some(0), Some(0)),
+                IR::new(IROp::Kill, Some(0), None),
+                IR::new(IROp::BpOffset, Some(0), Some(16)),
+                IR::new(IROp::LoadParam, Some(1), Some(0)),
+                IR::new(IROp::Kill, Some(0), None),
+                IR::new(IROp::BpOffset, Some(0), Some(24)),
                 IR::new(IROp::Imm, Some(1), Some(4)),
                 IR::new(IROp::Store, Some(0), Some(1)),
                 IR::new(IROp::Kill, Some(0), None),
                 IR::new(IROp::Kill, Some(1), None),
-                IR::new(IROp::BpOffset, Some(0), Some(16)),
+                IR::new(IROp::BpOffset, Some(0), Some(32)),
                 IR::new(IROp::Imm, Some(1), Some(2)),
                 IR::new(IROp::Store, Some(0), Some(1)),
                 IR::new(IROp::Kill, Some(0), None),
                 IR::new(IROp::Kill, Some(1), None),
                 IR::new(IROp::BpOffset, Some(0), Some(8)),
                 IR::new(IROp::Load, Some(0), Some(0)),
+                IR::new(IROp::BpOffset, Some(1), Some(24)),
+                IR::new(IROp::Load, Some(1), Some(1)),
+                IR::new(IROp::Mul, Some(0), Some(1)),
+                IR::new(IROp::Kill, Some(1), None),
                 IR::new(IROp::BpOffset, Some(1), Some(16)),
                 IR::new(IROp::Load, Some(1), Some(1)),
+                IR::new(IROp::BpOffset, Some(2), Some(32)),
+                IR::new(IROp::Load, Some(2), Some(2)),
+                IR::new(IROp::Mul, Some(1), Some(2)),
+                IR::new(IROp::Kill, Some(2), None),
                 IR::new(IROp::Add, Some(0), Some(1)),
                 IR::new(IROp::Kill, Some(1), None),
                 IR::new(IROp::Return, Some(0), None),
@@ -112,16 +129,16 @@ mod tests {
                 IR::new(IROp::BpOffset, Some(0), Some(24)),
                 IR::new(IROp::BpOffset, Some(1), Some(8)),
                 IR::new(IROp::Load, Some(1), Some(1)),
+                IR::new(IROp::StoreArg, Some(0), Some(1)),
                 IR::new(IROp::BpOffset, Some(2), Some(16)),
                 IR::new(IROp::Load, Some(2), Some(2)),
-                IR::new(IROp::Mul, Some(1), Some(2)),
-                IR::new(IROp::Kill, Some(2), None),
-                IR::new(IROp::FuncCall("f".to_string()), Some(2), None),
-                IR::new(IROp::Add, Some(1), Some(2)),
-                IR::new(IROp::Kill, Some(2), None),
-                IR::new(IROp::Store, Some(0), Some(1)),
-                IR::new(IROp::Kill, Some(0), None),
+                IR::new(IROp::StoreArg, Some(1), Some(2)),
+                IR::new(IROp::FuncCall("f".to_string()), Some(3), None),
                 IR::new(IROp::Kill, Some(1), None),
+                IR::new(IROp::Kill, Some(2), None),
+                IR::new(IROp::Store, Some(0), Some(3)),
+                IR::new(IROp::Kill, Some(0), None),
+                IR::new(IROp::Kill, Some(3), None),
                 IR::new(IROp::BpOffset, Some(0), Some(24)),
                 IR::new(IROp::Load, Some(0), Some(0)),
                 IR::new(IROp::Return, Some(0), None),
