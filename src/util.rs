@@ -20,7 +20,7 @@ impl fmt::Display for Loc {
 }
 
 /// Struct to hold value and location.
-/// `value` will be Token or AST node.
+/// `value` will be TokenKind, AstKind, or LexErrorKind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Annotation<T> {
     pub value: T,
@@ -79,9 +79,11 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseError::UnexpectedToken(expected, actual) => {
-                write!(f, "{}: Unexpected token '{}', expected {}", actual.loc, actual.value, expected)
-            }
+            ParseError::UnexpectedToken(expected, actual) => write!(
+                f,
+                "{}: Unexpected token '{}', expected {}",
+                actual.loc, actual.value, expected
+            ),
             ParseError::NotExpression(t) => write!(f, "{}: Not expression '{}'", t.loc, t.value),
             ParseError::NotOperator(t) => write!(f, "{}: Not operator '{}'", t.loc, t.value),
             ParseError::UnclosedOpenParen(t) => {

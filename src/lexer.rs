@@ -4,10 +4,6 @@ use std::str::from_utf8;
 use crate::util::{LexError, Loc};
 use crate::{Token, TokenKind};
 
-fn new_token(token_kind: TokenKind, start: usize, end: usize) -> Token {
-    Token::new(token_kind, Loc(start, end))
-}
-
 fn reserve_keywords() -> HashMap<String, TokenKind> {
     let mut keywords = HashMap::new();
     keywords.insert("let".to_string(), TokenKind::Let);
@@ -135,7 +131,7 @@ impl<'a> Lexer<'a> {
         let identifier = from_utf8(&self.input[start..end]).unwrap();
         let identifier = identifier.to_string();
         match keywords.get(&identifier) {
-            Some(token_kind) => self.tokens.push(new_token(token_kind.clone(), start, end)),
+            Some(token_kind) => self.tokens.push(Token::new(token_kind.clone(), Loc(start, end))),
             None => self.tokens.push(token!(Identifier(identifier), start, end)),
         }
         self.pos = end;

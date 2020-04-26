@@ -148,16 +148,18 @@ impl Generator {
     fn gen_load(&mut self, ir: &IR) {
         self.code.push(format!(
             "  mov {}, [{}]",
-            REGISTERS[ir.rhs.unwrap()], REGISTERS[ir.lhs.unwrap()]
+            REGISTERS[ir.rhs.unwrap()],
+            REGISTERS[ir.lhs.unwrap()]
         ));
     }
 
     /// Source register: Register to pass an argument(lhs)
     /// Destination register: Register which contains an address of a result of evaled an argument(rhs)
-    fn gen_load_param (&mut self, ir : &IR) {
+    fn gen_load_param(&mut self, ir: &IR) {
         self.code.push(format!(
             "  mov [{}], {}",
-            REGISTERS[ir.rhs.unwrap()], ARG_REGISTERS[ir.lhs.unwrap()]
+            REGISTERS[ir.rhs.unwrap()],
+            ARG_REGISTERS[ir.lhs.unwrap()]
         ));
     }
 
@@ -165,7 +167,8 @@ impl Generator {
     fn gen_store(&mut self, ir: &IR) {
         self.code.push(format!(
             "  mov [{}], {}",
-            REGISTERS[ir.lhs.unwrap()], REGISTERS[ir.rhs.unwrap()]
+            REGISTERS[ir.lhs.unwrap()],
+            REGISTERS[ir.rhs.unwrap()]
         ));
     }
 
@@ -174,7 +177,8 @@ impl Generator {
     fn gen_store_arg(&mut self, ir: &IR) {
         self.code.push(format!(
             "  mov {}, {}",
-            ARG_REGISTERS[ir.lhs.unwrap()], REGISTERS[ir.rhs.unwrap()]
+            ARG_REGISTERS[ir.lhs.unwrap()],
+            REGISTERS[ir.rhs.unwrap()]
         ));
     }
 
