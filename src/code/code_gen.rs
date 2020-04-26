@@ -1,4 +1,4 @@
-use crate::gen_ir::{IRGenerator, IROp, IR};
+use crate::ir::gen_ir::{IRGenerator, IROp, IR};
 use crate::ARG_REGISTER_COUNT;
 use crate::REGISTER_COUNT;
 

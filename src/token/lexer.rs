@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::str::from_utf8;
 
-use crate::util::{LexError, Loc};
-use crate::{Token, TokenKind};
+use crate::token::LexError;
+use crate::token::{Token, TokenKind};
+use crate::Loc;
 
 fn reserve_keywords() -> HashMap<String, TokenKind> {
     let mut keywords = HashMap::new();
@@ -131,7 +132,9 @@ impl<'a> Lexer<'a> {
         let identifier = from_utf8(&self.input[start..end]).unwrap();
         let identifier = identifier.to_string();
         match keywords.get(&identifier) {
-            Some(token_kind) => self.tokens.push(Token::new(token_kind.clone(), Loc(start, end))),
+            Some(token_kind) => self
+                .tokens
+                .push(Token::new(token_kind.clone(), Loc(start, end))),
             None => self.tokens.push(token!(Identifier(identifier), start, end)),
         }
         self.pos = end;
@@ -164,12 +167,12 @@ impl<'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::Lexer;
-    use crate::util::Loc;
+    use crate::token::lexer::Lexer;
+    use crate::Loc;
 
     #[test]
     fn test_lexer_error() {
-        use crate::lexer::LexError;
+        use crate::token::LexError;
         let mut lexer = Lexer::new("1 $ 2 * 3 - -10");
         let tokens = lexer.lex();
         assert_eq!(tokens, Err(LexError::invalid_char('$', Loc(2, 3))),);

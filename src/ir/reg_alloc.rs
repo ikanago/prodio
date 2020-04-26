@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::gen_ir::{Function, IROp};
+use crate::ir::gen_ir::{Function, IROp};
 use crate::REGISTER_COUNT;
 
 impl Function {
@@ -61,9 +61,9 @@ impl Function {
 
 #[cfg(test)]
 mod tests {
-    use crate::gen_ir::*;
-    use crate::lexer::Lexer;
-    use crate::parser::Parser;
+    use crate::ir::gen_ir::*;
+    use crate::parse::parser::Parser;
+    use crate::token::lexer::Lexer;
     #[test]
     fn test_calc() -> std::io::Result<()> {
         let source_code = crate::read_file_content("examples/calc.pr")?;

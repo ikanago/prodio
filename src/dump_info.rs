@@ -1,6 +1,6 @@
-use crate::gen_ir::IRGenerator;
-use crate::parser::Ast;
-use crate::Token;
+use crate::ir::gen_ir::IRGenerator;
+use crate::parse::parser::Ast;
+use crate::token::Token;
 
 pub fn dump_tokens(tokens: &[Token]) {
     eprintln!("------DUMP TOKEN------");

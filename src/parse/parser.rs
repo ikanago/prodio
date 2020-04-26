@@ -1,5 +1,6 @@
-use crate::util::{Annotation, Loc, ParseError};
-use crate::{Token, TokenKind};
+use crate::parse::ParseError;
+use crate::token::{Token, TokenKind};
+use crate::{Annotation, Loc};
 
 /// Data type of AST node.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

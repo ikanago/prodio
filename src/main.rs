@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate clap;
 
-use prodio::code_gen::Generator;
+use prodio::code::code_gen::Generator;
 use prodio::dump_info;
-use prodio::gen_ir;
-use prodio::lexer::Lexer;
-use prodio::parser::Parser;
+use prodio::ir::gen_ir;
+use prodio::parse::parser::Parser;
+use prodio::token::lexer::Lexer;
 use std::fs::File;
 use std::io::Write;
 

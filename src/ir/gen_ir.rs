@@ -1,8 +1,8 @@
 // use crate::code_gen;
 use std::collections::{HashMap, VecDeque};
 
-use crate::parser::AstKind::*;
-use crate::parser::{Ast, BinOpKind, UniOpKind};
+use crate::parse::parser::AstKind::*;
+use crate::parse::parser::{Ast, BinOpKind, UniOpKind};
 
 /// Kinds of IR operand.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -331,9 +331,9 @@ impl Function {
 
 #[cfg(test)]
 mod tests {
-    use crate::gen_ir::*;
-    use crate::lexer::Lexer;
-    use crate::parser::Parser;
+    use crate::ir::gen_ir::*;
+    use crate::parse::parser::Parser;
+    use crate::token::lexer::Lexer;
     #[test]
     fn test_calc() -> std::io::Result<()> {
         let source_code = crate::read_file_content("examples/calc.pr")?;
