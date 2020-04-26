@@ -1,8 +1,8 @@
 // use crate::code_gen;
 use std::collections::{HashMap, VecDeque};
 
-use crate::parse::parser::AstKind::*;
-use crate::parse::parser::{Ast, BinOpKind, UniOpKind};
+use crate::parse::AstKind::*;
+use crate::parse::{Ast, BinOpKind, UniOpKind};
 
 /// Kinds of IR operand.
 #[derive(Debug, Clone, PartialEq, Eq)]

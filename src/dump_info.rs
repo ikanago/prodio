@@ -1,5 +1,5 @@
 use crate::ir::gen_ir::IRGenerator;
-use crate::parse::parser::Ast;
+use crate::parse::Ast;
 use crate::token::Token;
 
 pub fn dump_tokens(tokens: &[Token]) {

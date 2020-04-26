@@ -63,7 +63,6 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
-
         Ok(&self.tokens)
     }
 
