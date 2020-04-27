@@ -128,6 +128,7 @@ mod tests {
                 IR::new(IROp::Kill, Some(1), None),
                 IR::new(IROp::BpOffset, Some(0), Some(16)),
                 IR::new(IROp::Imm, Some(1), Some(2)),
+                IR::new(IROp::Minus, Some(1), None),
                 IR::new(IROp::Store, Some(0), Some(1)),
                 IR::new(IROp::Kill, Some(0), None),
                 IR::new(IROp::Kill, Some(1), None),
