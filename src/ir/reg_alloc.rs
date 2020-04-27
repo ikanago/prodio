@@ -13,7 +13,12 @@ impl Function {
 
         for ir in &mut self.ir_vec {
             match ir.op {
-                IROp::Imm | IROp::BpOffset | IROp::Cond | IROp::Return | IROp::FuncCall(_) => {
+                IROp::Imm
+                | IROp::Minus
+                | IROp::BpOffset
+                | IROp::Cond
+                | IROp::Return
+                | IROp::FuncCall(_) => {
                     ir.lhs = Function::alloc(ir.lhs, &mut is_reg_used, &mut reg_map)
                 }
                 IROp::LoadParam | IROp::StoreArg => {
